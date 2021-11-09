@@ -5,3 +5,6 @@
 
 ## Datasets.
 World Bank: https://data.worldbank.org/topic/education
+
+convert to pdf:
+jupyter nbconvert --to pdf --no-input *.ipynb
