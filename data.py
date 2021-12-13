@@ -10,22 +10,35 @@ def get_europe_countries():
     return pd.read_csv(COUNTRIES_PATH)
 
 
+def get_selected_indicators():
+    PATH = DATA_PATH / 'world_bank' / 'selected_indicators.csv'
+
+    df = pd.read_csv(PATH)
+
+    return df.indicator_code.values
+
+
 def get_education_data():
-    WORLD_BANK_EDUCATION_PATH = DATA_PATH / 'world_bank' / 'API_4_DS2_en_csv_v2_3160069.csv'
+    PATH = DATA_PATH / 'world_bank' / 'API_4_DS2_en_csv_v2_3160069.csv'
 
-    df = pd.read_csv(WORLD_BANK_EDUCATION_PATH, skiprows=4)
+    df = pd.read_csv(PATH, skiprows=4)
 
-    df = df.drop(columns=['Unnamed: 65', 'Indicator Name', 'Country Name'])
     df = df.rename(columns={
         'Country Code': 'country_code',
         'Country Name': 'country_name',
-        'Indicator Code': 'indicator_code',
-        'Indicator Name': 'indicator_name',
+        'Indicator Code': 'indicator_code'
     })
+
+    countries = df[['country_code', 'country_name']].set_index('country_code').drop_duplicates()
+    df = df.drop(columns=['Unnamed: 65', 'Indicator Name', 'country_name'])
 
     df = df.melt(id_vars=['country_code', 'indicator_code'], var_name='year')
     df.year = df.year.astype(int)
     df = df.pivot(index=['country_code', 'year'], columns='indicator_code', values='value')
+
+    selected_indicators = get_selected_indicators()
+    df = df[selected_indicators]
+    df = df.join(countries, on='country_code')
 
     # assert set(europe_countries.country_code3) == set(df.index.get_level_values('country_code'))
     # assert set([str(year) for year in range(1991,2021)]) == set(df.columns)
@@ -33,10 +46,21 @@ def get_education_data():
     return df
 
 
-def get_hlo_data():
-    WORLD_BANK_HLO_PATH = DATA_PATH / 'world_bank' / 'hlo_database.xlsx'
+def get_indicator_desc():
+    PATH = DATA_PATH / 'world_bank' / 'Metadata_Indicator_API_4_DS2_en_csv_v2_3160069.csv'
 
-    df = pd.read_excel(WORLD_BANK_HLO_PATH, sheet_name='HLO Database')
+    df = pd.read_csv(PATH)
+    df = df.drop(columns=['SOURCE_ORGANIZATION', 'Unnamed: 4'])
+    df = df.rename(columns={'INDICATOR_CODE': 'indicator_code', 'INDICATOR_NAME': 'indicator_name'})
+    df = df.set_index('indicator_code')
+
+    return df
+
+
+def get_hlo_data():
+    PATH = DATA_PATH / 'world_bank' / 'hlo_database.xlsx'
+
+    df = pd.read_excel(PATH, sheet_name='HLO Database')
     df = df.drop(columns=['country', 'sourcetest', 'n_res', 'hlo_se', 'hlo_m_se', 'hlo_f_se', 'region', 'incomegroup'])
     df = df.rename(columns={'code': 'country_code'})
     df = df.set_index(['country_code', 'year', 'subject', 'level'])
@@ -46,11 +70,11 @@ def get_hlo_data():
 
 
 def get_gdp_data():
-    MADDISON_GDP_PATH = DATA_PATH / 'maddison' / 'mpd2020.xlsx'
+    PATH = DATA_PATH / 'maddison' / 'mpd2020.xlsx'
 
-    df = pd.read_excel(MADDISON_GDP_PATH, sheet_name='Full data')
-    df = df.drop(columns=['pop', 'country'])
-    df = df.rename(columns={'countrycode': 'country_code'})
+    df = pd.read_excel(PATH, sheet_name='Full data')
+    df = df.drop(columns=['country'])
+    df = df.rename(columns={'countrycode': 'country_code', 'pop': 'population'})
     df = df.set_index(['country_code', 'year'])
 
     return df
