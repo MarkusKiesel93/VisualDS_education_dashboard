@@ -10,18 +10,22 @@ def get_europe_countries():
     return pd.read_csv(COUNTRIES_PATH)
 
 
-def get_selected_indicators():
+def get_education_indicators(without_info=True):
     PATH = DATA_PATH / 'world_bank' / 'selected_indicators.csv'
 
     df = pd.read_csv(PATH)
+    df = df.set_index('indicator_code')
+    if without_info:
+        df = df.indicator
 
-    return df.indicator_code.values
+    return df
 
 
 def get_education_data():
     PATH = DATA_PATH / 'world_bank' / 'API_4_DS2_en_csv_v2_3160069.csv'
 
     df = pd.read_csv(PATH, skiprows=4)
+    indicators = get_education_indicators()
 
     df = df.rename(columns={
         'Country Code': 'country_code',
@@ -34,14 +38,10 @@ def get_education_data():
 
     df = df.melt(id_vars=['country_code', 'indicator_code'], var_name='year')
     df.year = df.year.astype(int)
-    df = df.pivot(index=['country_code', 'year'], columns='indicator_code', values='value')
-
-    selected_indicators = get_selected_indicators()
-    df = df[selected_indicators]
+    df = df.join(indicators, on='indicator_code', how='right')
+    df = df.drop(columns=['indicator_code'])
+    df = df.pivot(index=['country_code', 'year'], columns='indicator', values='value')
     df = df.join(countries, on='country_code')
-
-    # assert set(europe_countries.country_code3) == set(df.index.get_level_values('country_code'))
-    # assert set([str(year) for year in range(1991,2021)]) == set(df.columns)
 
     return df
 
@@ -80,7 +80,7 @@ def get_gdp_data():
     return df
 
 
-def merged_data(europe=True):
+def merged_data(from_year=2000, europe=False):
     edu = get_education_data()
     hlo = get_hlo_data()
 
@@ -91,8 +91,7 @@ def merged_data(europe=True):
     df = df.sort_index(axis=1, level='year')
     df = df.groupby('country_code').ffill()
 
-    years_to_remove = [year for year in range(1960, 2001)]
-    df = df.drop(index=years_to_remove, level='year')
+    df = df[df.index.isin([year for year in range(from_year, 2021)], level=1)]
 
     if europe:
         europe_countries = get_europe_countries()
