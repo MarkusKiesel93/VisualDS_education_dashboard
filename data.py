@@ -21,6 +21,54 @@ def get_education_indicators(without_info=True):
     return df
 
 
+def get_education_meta():
+    PATH = DATA_PATH / 'world_bank' / 'Metadata_Country_API_4_DS2_en_csv_v2_3160069.csv'
+
+    df = pd.read_csv(PATH)
+    df = df.drop(columns=['Unnamed: 5', 'SpecialNotes'])
+    df = df.rename(columns={
+        'Country Code': 'country_code',
+        'Region': 'region',
+        'IncomeGroup': 'income_group',
+        'TableName': 'country_name'
+    })
+    df = df.set_index('country_code')
+
+    df = df[df.region.notna()]
+
+    # only Venezuela income_group missing (online reseach suggests "Lower middle income")
+    df.income_group = df.income_group.fillna('Lower middle income')
+
+    return df
+
+
+def create_indicator_levels(name):
+    parts = name.split('_')
+
+    school_level = ['primary', 'secondary', 'tertiary']
+    gender = ['female', 'male', 'total']
+    level1 = 'total'
+    level2 = 'total'
+
+    if len(parts) > 2:
+        # create level 1
+        if parts[-1] in school_level:
+            level1 = parts[-1]
+        elif parts[-2] in school_level:
+            level1 = parts[-2]
+
+        # create level 2
+        if parts[-1] in gender:
+            level2 = parts[-1]
+
+        # create level 0
+        for var in school_level + gender:
+            if var in name:
+                name = name.replace('_' + var, '')
+
+        return (name, level1, level2)
+
+
 def get_education_data():
     PATH = DATA_PATH / 'world_bank' / 'API_4_DS2_en_csv_v2_3160069.csv'
 
@@ -33,7 +81,6 @@ def get_education_data():
         'Indicator Code': 'indicator_code'
     })
 
-    countries = df[['country_code', 'country_name']].set_index('country_code').drop_duplicates()
     df = df.drop(columns=['Unnamed: 65', 'Indicator Name', 'country_name'])
 
     df = df.melt(id_vars=['country_code', 'indicator_code'], var_name='year')
@@ -41,7 +88,15 @@ def get_education_data():
     df = df.join(indicators, on='indicator_code', how='right')
     df = df.drop(columns=['indicator_code'])
     df = df.pivot(index=['country_code', 'year'], columns='indicator', values='value')
-    df = df.join(countries, on='country_code')
+    multi_columns = pd.MultiIndex.from_tuples([create_indicator_levels(name) for name in df.columns],
+                                              names=['indicator', 'level', 'gender'])
+    df.columns = multi_columns
+
+    df = df.stack(level=[1, 2])
+
+    df_meta = get_education_meta()
+
+    df = df.join(df_meta, how='inner', on='country_code')
 
     return df
 
@@ -64,7 +119,26 @@ def get_hlo_data():
     df = df.drop(columns=['country', 'sourcetest', 'n_res', 'hlo_se', 'hlo_m_se', 'hlo_f_se', 'region', 'incomegroup'])
     df = df.rename(columns={'code': 'country_code'})
     df = df.set_index(['country_code', 'year', 'subject', 'level'])
-    df = df.groupby(['country_code', 'year']).mean()
+    df = df.groupby(['country_code', 'year', 'level']).mean()
+
+    multi_columns = pd.MultiIndex.from_tuples([
+        ('learning_outcome', 'total'),
+        ('learning_outcome', 'male'),
+        ('learning_outcome', 'female')],
+        names=['indicator', 'gender'])
+    df.columns = multi_columns
+
+    df_total = df.groupby(['country_code', 'year']).mean()
+    df_total = df_total.stack().reset_index().set_index(['country_code', 'year'])
+    df_total['level'] = 'total'
+
+    df = df.stack()
+    df = df.reset_index().set_index(['country_code', 'year'])
+    df.level = df.level.replace('pri', 'primary')
+    df.level = df.level.replace('sec', 'secondary')
+
+    df = pd.concat([df, df_total])
+    df = df.reset_index().set_index(['country_code', 'year', 'level', 'gender'])
 
     return df
 
@@ -86,10 +160,10 @@ def merged_data(from_year=2000, europe=False):
 
     df = edu.join(hlo)
     gdp = get_gdp_data()
-    df = df.join(gdp)
+    df = df.join(gdp, on=['country_code', 'year'])
 
     df = df.sort_index(axis=1, level='year')
-    df = df.groupby('country_code').ffill()
+    df = df.groupby(['country_code', 'level', 'gender']).ffill()
 
     df = df[df.index.isin([year for year in range(from_year, 2021)], level=1)]
 
