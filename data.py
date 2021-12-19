@@ -1,15 +1,20 @@
 import pandas as pd
+import geopandas as gpd
 from pathlib import Path
-
-from pandas.core.frame import DataFrame
 
 DATA_PATH = Path(__file__).parent / 'data'
 
 
-def get_europe_countries():
-    COUNTRIES_PATH = DATA_PATH / 'europe_countries.csv'
+def get_geo_data():
+    PATH = DATA_PATH / 'ne_110m_admin_0_countries' / 'ne_110m_admin_0_countries.shp'
 
-    return pd.read_csv(COUNTRIES_PATH)
+    df = gpd.read_file(PATH)
+    df = df[['SOV_A3', 'geometry']]
+    df = df.rename(columns={'SOV_A3': 'country_code'})
+    df = df.set_index('country_code')
+    df = df.drop(index=['ATA'])  # remove antarctis
+
+    return df
 
 
 def get_education_indicators(without_info=True):
@@ -157,7 +162,7 @@ def get_gdp_data():
     return df
 
 
-def merged_data(from_year=2000, europe=False, indexed=False):
+def get_merged_data(from_year=2000, europe=False, ffill=True, indexed=False, year_as_datetime=True):
     edu = get_education_data()
     hlo = get_hlo_data()
 
@@ -165,10 +170,11 @@ def merged_data(from_year=2000, europe=False, indexed=False):
     gdp = get_gdp_data()
     df = df.join(gdp, on=['country_code', 'year'])
 
-    df = df.sort_index(axis=1, level='year')
-    df = df.groupby(['country_code', 'level', 'gender']).ffill()
-
     df['education_spent'] = df.gdppc * df.education_expenditure_gdp_rate / 100
+    
+    if ffill:
+        df = df.sort_index(axis=1, level='year')
+        df = df.groupby(['country_code', 'level', 'gender']).ffill()
 
     df = df[df.index.isin([year for year in range(from_year, 2021)], level='year')]
 
@@ -177,7 +183,9 @@ def merged_data(from_year=2000, europe=False, indexed=False):
         df = df[df.index.isin(europe_countries.country_code3, level='country_code')]
 
     df = df.reset_index()
-    df.year = pd.to_datetime(df.year, format='%Y')
+    
+    if year_as_datetime:
+        df.year = pd.to_datetime(df.year, format='%Y')
 
     if indexed:
         df = df.reset_index(['country_code', 'year', 'level', 'gender'])
@@ -186,5 +194,5 @@ def merged_data(from_year=2000, europe=False, indexed=False):
 
 
 if __name__ == '__main__':
-    df = merged_data()
+    df = get_merged_data()
     df.to_csv(DATA_PATH / 'data.csv')
