@@ -1,6 +1,8 @@
 import pandas as pd
 from pathlib import Path
 
+from pandas.core.frame import DataFrame
+
 DATA_PATH = Path(__file__).parent / 'data'
 
 
@@ -84,7 +86,8 @@ def get_education_data():
     df = df.drop(columns=['Unnamed: 65', 'Indicator Name', 'country_name'])
 
     df = df.melt(id_vars=['country_code', 'indicator_code'], var_name='year')
-    df.year = df.year.astype(int)
+    df.year = df.year.astype(int) # todo: to datetime
+
     df = df.join(indicators, on='indicator_code', how='right')
     df = df.drop(columns=['indicator_code'])
     df = df.pivot(index=['country_code', 'year'], columns='indicator', values='value')
@@ -92,7 +95,7 @@ def get_education_data():
                                               names=['indicator', 'level', 'gender'])
     df.columns = multi_columns
 
-    df = df.stack(level=[1, 2])
+    df = df.stack(level=[1, 2], dropna=False)
 
     df_meta = get_education_meta()
 
@@ -154,7 +157,7 @@ def get_gdp_data():
     return df
 
 
-def merged_data(from_year=2000, europe=False):
+def merged_data(from_year=2000, europe=False, indexed=False):
     edu = get_education_data()
     hlo = get_hlo_data()
 
@@ -165,11 +168,19 @@ def merged_data(from_year=2000, europe=False):
     df = df.sort_index(axis=1, level='year')
     df = df.groupby(['country_code', 'level', 'gender']).ffill()
 
-    df = df[df.index.isin([year for year in range(from_year, 2021)], level=1)]
+    df['education_spent'] = df.gdppc * df.education_expenditure_gdp_rate / 100
+
+    df = df[df.index.isin([year for year in range(from_year, 2021)], level='year')]
 
     if europe:
         europe_countries = get_europe_countries()
         df = df[df.index.isin(europe_countries.country_code3, level='country_code')]
+
+    df = df.reset_index()
+    df.year = pd.to_datetime(df.year, format='%Y')
+
+    if indexed:
+        df = df.reset_index(['country_code', 'year', 'level', 'gender'])
 
     return df
 
