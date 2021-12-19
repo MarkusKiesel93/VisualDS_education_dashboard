@@ -46,29 +46,34 @@ def get_education_meta():
     # only Venezuela income_group missing (online reseach suggests "Lower middle income")
     df.income_group = df.income_group.fillna('Lower middle income')
 
+    df.columns = create_multi_index(df.columns)
+
     return df
 
 
-def create_indicator_levels(name):
-    parts = name.split('_')
+def create_multi_index(columns):
+    level_names = []
+    for name in columns:
+        parts = name.split('_')
 
-    levels = ['primary', 'secondary', 'tertiary', 'total']
-    genders = ['female', 'male', 'total']
-    level1 = 'total'
-    level2 = 'total'
+        levels = ['primary', 'secondary', 'tertiary', 'total']
+        genders = ['female', 'male', 'total']
+        level1 = 'total'
+        level2 = 'total'
 
-    if len(parts) > 2:
-        # create level 2
-        if parts[-1] in genders:
-            level2 = parts[-1]
-            name = name.replace('_' + level2, '')     
-            
-        # create level 1
-        if parts[-2] in levels:
-            level1 = parts[-2]
-            name = name.replace('_' + level1, '')  
+        if len(parts) > 2:
+            # create level 2
+            if parts[-1] in genders:
+                level2 = parts[-1]
+                name = name.replace('_' + level2, '')
 
-        return (name, level1, level2)
+            # create level 1
+            if parts[-2] in levels:
+                level1 = parts[-2]
+                name = name.replace('_' + level1, '')
+        level_names.append((name, level1, level2))
+
+    return pd.MultiIndex.from_tuples(level_names, names=['indicator', 'level', 'gender'])
 
 
 def get_education_data():
@@ -114,16 +119,7 @@ def get_education_data():
             df[f'expenditure_per_student_rate_{level}_{gender}'] = df[f'expenditure_per_student_rate_{level}_total']
             df[f'expenditure_rate_{level}_{gender}'] = df[f'expenditure_rate_{level}_total']
 
-    multi_columns = pd.MultiIndex.from_tuples([create_indicator_levels(name) for name in df.columns],
-                                              names=['indicator', 'level', 'gender'])
-
-    df.columns = multi_columns
-
-    df = df.stack(level=[1, 2], dropna=False)
-
-    df_meta = get_education_meta()
-
-    df = df.join(df_meta, how='inner', on='country_code')
+    df.columns = create_multi_index(df.columns)
 
     return df
 
@@ -167,6 +163,8 @@ def get_hlo_data():
     df = pd.concat([df, df_total])
     df = df.reset_index().set_index(['country_code', 'year', 'level', 'gender'])
 
+    df = df.unstack(level=['level', 'gender'])
+
     return df
 
 
@@ -178,37 +176,30 @@ def get_gdp_data():
     df = df.rename(columns={'countrycode': 'country_code', 'pop': 'population'})
     df = df.set_index(['country_code', 'year'])
 
+    df.columns = create_multi_index(df.columns)
+
     return df
 
 
-def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=True, unstacked=True):
+def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=True):
     edu = get_education_data()
+    edu_meta = get_education_meta()
     hlo = get_hlo_data()
-
-    df = edu.join(hlo)
     gdp = get_gdp_data()
+
+    df = edu.join(edu_meta, how='inner', on='country_code')
+    df = df.join(hlo)
     df = df.join(gdp, on=['country_code', 'year'])
 
-    df['education_spent'] = df.gdppc * df.education_expenditure_gdp_rate / 100
+    df[('education_spent', 'total', 'total')] = df[('gdppc', 'total', 'total')] * df[('education_expenditure_gdp_rate', 'total', 'total')] /  100
 
     if ffill:
-        df = df.sort_index(axis=1, level='year')
-        df = df.groupby(['country_code', 'level', 'gender']).ffill()
+        df = df.sort_index(level='year')
+        df = df.groupby(['country_code']).ffill()
 
-    df = df[df.index.isin([year for year in range(from_year, 2021)], level='year')]   
-
-    if unstacked:
-        df = df.unstack(level=['level', 'gender'])
-        df = df.dropna(axis=1, how='all')
-
-    df = df.reset_index()
+    df = df[df.index.isin([year for year in range(from_year, 2021)], level='year')]
     if year_as_datetime:
-        df.year = pd.to_datetime(df.year, format='%Y')
-    if indexed:
-        if unstacked:
-            df = df.set_index(['country_code', 'year'])
-        else:
-            df = df.set_index(['country_code', 'year', 'level', 'gender'])
+        df.index = df.index.set_levels([df.index.levels[0], pd.to_datetime(df.index.levels[1], format='%Y')])
 
     return df
 
