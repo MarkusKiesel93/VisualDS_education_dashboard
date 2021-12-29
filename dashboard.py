@@ -30,12 +30,13 @@ source = ColumnDataSource(df.xs(DATES[-1], level='year').xs(('total', 'total'), 
 color_mapper = LinearColorMapper(palette=Category10[7])
 
 
-def update_year(attr, old, new):
-    source.data = df.xs(new, level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
-
-
-def update_color(attr, old, new):
+def update_view(attr, old, new):
     layout.children[1] = scatter()
+
+
+def update_data(attr, old, new):
+    source.data = (df.xs(slider_year.value, level='year')
+                   .xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender')))
 
 
 # year slider
@@ -45,7 +46,7 @@ slider_year = Slider(
     start=DATES[0],
     end=DATES[-1],
     step=1)
-slider_year.on_change('value', update_year)
+slider_year.on_change('value', update_data)
 
 
 # color selecter
@@ -53,7 +54,26 @@ select_color = Select(
     title='Color by:',
     value='region',
     options=[('region', 'Region'), ('income_group', 'Income Group')])
-select_color.on_change('value', update_color)
+select_color.on_change('value', update_view)
+
+
+# level selecter
+select_level = Select(
+    title='Education Level',
+    value='total',
+    options=['total', 'primary', 'secondary', 'tertiary']
+)
+select_level.on_change('value', update_data)
+
+
+# gender selecter
+select_gender = Select(
+    title='Gender',
+    value='total',
+    options=['total', 'female', 'male']
+)
+select_gender.on_change('value', update_data)
+
 
 
 def scatter():
@@ -81,6 +101,7 @@ def scatter():
         ('GDPpc', '@gdppc')
     ]
 
+    # create scatterplot
     fig.scatter(
         x='gdppc',
         y='learning_outcome',
@@ -96,7 +117,7 @@ def scatter():
     return fig
 
 
-tools = column(slider_year, select_color)
+tools = column(slider_year, select_level, select_gender, select_color)
 top_right = column(scatter())
 layout = row(tools, top_right)
 
