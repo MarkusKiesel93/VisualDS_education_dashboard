@@ -15,3 +15,6 @@ jupyter nbconvert --to pdf --no-input *.ipynb
 teachers_primary_total - teachers_primary_female
 1 - education_pupils_primary_female
 1 - education_pupils_secondary_female
+
+# run boke server
+bokeh serve --show myapp.py

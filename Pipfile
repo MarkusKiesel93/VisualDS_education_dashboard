@@ -10,9 +10,10 @@ jupyter = "==1.0.0"
 seaborn = "==0.11.2"
 matplotlib = "==3.4.3"
 openpyxl = "==3.0.9"
-bokeh = "*"
+bokeh = "==2.4.2"
 geopandas = "==0.10.2"
 colorcet = "==3.0.0"
+nbserverproxy = "==0.8.8"
 
 [dev-packages]
 
