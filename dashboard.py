@@ -57,22 +57,33 @@ select_color.on_change('value', update_color)
 
 
 def scatter():
-    p = figure(
+    fig = figure(
         height=400,
         width=800,
-        title='Harmonized Learning outcome by GDPPC',
+        tools='hover,tap,pan,crosshair,box_zoom,\
+            wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
+        toolbar_location='above',
         x_axis_type='log',
         y_range=select_range('learning_outcome'),
         x_range=select_range('gdppc'))
-    p.xaxis.axis_label = 'log GDP per capita'
-    p.yaxis.axis_label = 'Harmonized Learning Outcome'
-    p.add_layout(Legend(), 'right')
-    p.legend.location = 'top_left'
-    p.legend.title = 'Regions'
+    fig.xaxis.axis_label = 'log GDP per capita'
+    fig.yaxis.axis_label = 'Harmonized Learning Outcome'
+    fig.add_layout(Legend(), 'right')
+    fig.legend.location = 'top_left'
+    fig.legend.title = 'Regions'
 
-    p.scatter(
-        'gdppc',
-        'learning_outcome',
+    # set tooltips
+    fig.hover.tooltips = [
+        ('Country', '@country_name'),
+        ('Region', '@region'),
+        ('Income Group', '@income_group'),
+        ('Learning Outcome', '@learning_outcome'),
+        ('GDPpc', '@gdppc')
+    ]
+
+    fig.scatter(
+        x='gdppc',
+        y='learning_outcome',
         source=source,
         color=factor_cmap(
             field_name=select_color.value,
@@ -82,7 +93,7 @@ def scatter():
         legend_group=select_color.value,
         fill_alpha=0.5)
 
-    return p
+    return fig
 
 
 tools = column(slider_year, select_color)
