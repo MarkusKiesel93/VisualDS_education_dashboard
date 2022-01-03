@@ -1,12 +1,12 @@
 from bokeh.transform import factor_cmap, factor_mark
 from bokeh.models import CategoricalColorMapper, Legend, LinearColorMapper
-from bokeh.palettes import Category10
-from bokeh.layouts import column, row
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Button, Patches, Select, Range1d, CategoricalColorMapper
-from bokeh.plotting import figure
-from bokeh.io import show, output_notebook, curdoc
+from bokeh.palettes import Category10, Greens9
+from bokeh.layouts import column, row, layout
+from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Button, Patches, Select, Range1d, CategoricalColorMapper, ColorBar
+from bokeh.plotting import figure, curdoc
+from bokeh.io import show, output_notebook
 
-from data import get_merged_data
+from data import get_merged_data, get_geo_data
 
 df = get_merged_data(year_as_datetime=False)
 df.head()
@@ -24,6 +24,8 @@ GROUPS = {
     'region': sorted(df[('region', 'total', 'total')].unique()),
     'income_group': sorted(df[('income_group', 'total', 'total')].unique())
 }
+INDICATORS = sorted(df.columns.get_level_values('indicator').unique())
+
 
 source = ColumnDataSource(df.xs(DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender')))
 
@@ -56,6 +58,20 @@ select_color = Select(
     options=[('region', 'Region'), ('income_group', 'Income Group')])
 select_color.on_change('value', update_view)
 
+select_indicator = Select(
+    title='Indicator',
+    value='learning_outcome',
+    options=INDICATORS
+)
+select_indicator.on_change('value', update_view)
+
+select_by = Select(
+    title='By',
+    value='gdppc',
+    options=INDICATORS
+)
+select_by.on_change('value', update_view)
+
 
 # level selecter
 select_level = Select(
@@ -74,8 +90,6 @@ select_gender = Select(
 )
 select_gender.on_change('value', update_data)
 
-
-
 def scatter():
     fig = figure(
         height=400,
@@ -84,8 +98,8 @@ def scatter():
             wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
         toolbar_location='above',
         x_axis_type='log',
-        y_range=select_range('learning_outcome'),
-        x_range=select_range('gdppc'))
+        y_range=select_range(select_indicator.value),
+        x_range=select_range(select_by.value))
     fig.xaxis.axis_label = 'log GDP per capita'
     fig.yaxis.axis_label = 'Harmonized Learning Outcome'
     fig.add_layout(Legend(), 'right')
@@ -97,29 +111,95 @@ def scatter():
         ('Country', '@country_name'),
         ('Region', '@region'),
         ('Income Group', '@income_group'),
-        ('Learning Outcome', '@learning_outcome'),
-        ('GDPpc', '@gdppc')
+        ('Bla Bla', f'@{select_indicator.value}'),
+        ('Bla Bla', f'@{select_by.value}')
     ]
 
     # create scatterplot
     fig.scatter(
-        x='gdppc',
-        y='learning_outcome',
+        x=select_by.value,
+        y=select_indicator.value,
         source=source,
         color=factor_cmap(
             field_name=select_color.value,
             palette=Category10[len(GROUPS[select_color.value])],
             factors=GROUPS[select_color.value]),
         size=9,
+        hover_line_color='black',
         legend_group=select_color.value,
         fill_alpha=0.5)
 
     return fig
 
 
-tools = column(slider_year, select_level, select_gender, select_color)
-top_right = column(scatter())
-layout = row(tools, top_right)
+def choropleth():
+    geo_data = get_geo_data()
+    df = get_merged_data(from_year=2020, year_as_datetime=False)
+    df = df.xs(2020, level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
+    geo_data = geo_data.join(df, on='country_code')
+    geo_source = GeoJSONDataSource(geojson=geo_data.to_json())
 
-curdoc().add_root(layout)
+    fig = figure(
+        tools='hover,tap,pan,crosshair,box_zoom,\
+            wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
+        plot_width=900, 
+        plot_height=500,
+        x_axis_location=None,
+        y_axis_location=None)
+    fig.grid.visible = False
+    fig.title.text = 'Literacy Rate by Country 2020'
+    fig.title.align = 'center'
+    fig.title.text_font_size = '20px'
+
+    color_mapper = LinearColorMapper(
+        palette=list(reversed(Greens9)),
+        low=0,
+        high=100)
+
+    # patches = Patches(
+    #     xs="xs", ys="ys",
+    #     fill_alpha=0.7, 
+    #     fill_color={'field': 'literacy_rate', 'transform': color_mapper},
+    #     line_color='white', 
+    #     line_width=0.3)
+    # fig.add_glyph(geo_source, patches)
+
+    fig.patches(
+        xs="xs",
+        ys="ys",
+        source=geo_source,
+        fill_alpha=0.7,
+        fill_color={'field': 'literacy_rate', 'transform': color_mapper},
+        line_color='white',
+        line_width=0.3,
+        hover_line_color='black',
+    )
+
+    # set tooltips
+    fig.hover.tooltips = [
+        ('Country', '@country_name'),
+        ('Region', '@region'),
+        ('Income Group', '@income_group'),
+        ('Bla Bla', f'@{select_indicator.value}'),
+        ('Bla Bla', f'@{select_by.value}')
+    ]
+
+    color_bar = ColorBar(
+        color_mapper=color_mapper,
+        location="bottom_left", orientation="horizontal",
+        title="Literacy Rate",
+        title_text_font_size="14px", title_text_font_style="bold",
+        background_fill_alpha=0.0)
+    fig.add_layout(color_bar)
+
+    return fig
+
+
+tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_color)
+plots = layout(
+    row(tools, column(scatter())),
+    row(choropleth())
+)
+
+curdoc().add_root(plots)
 curdoc().title = 'Dashboard'
