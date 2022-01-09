@@ -178,6 +178,12 @@ def get_gdp_data():
 
     df.columns = create_multi_index(df.columns)
 
+    levels = ['primary', 'secondary', 'tertiary', 'total']
+    genders = ['male', 'female', 'total']
+    for level in levels:
+        for gender in genders:
+            df[('gdppc', level, gender)] = df[('gdppc', 'total', 'total')]
+
     return df
 
 

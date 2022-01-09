@@ -22,15 +22,13 @@ def select_range(indicator, level='total', gender='total'):
 
 
 def format_indicator(indicator):
-    words = indicator.split()
-    return ' '.join(words.capitalize())
+    words = indicator.split('_')
+    return ' '.join([word.capitalize() for word in words])
 
 
-DATES = sorted(df.index.get_level_values('year').unique())
-GROUPS = {
-    'region': sorted(df[('region', 'total', 'total')].unique()),
-    'income_group': sorted(df[('income_group', 'total', 'total')].unique())
-}
+def create_options(indicators):
+    return [(indicator, format_indicator(indicator)) for indicator in indicators]
+
 
 # todo: do something with this values:
 OTHER_INDICATORS = [
@@ -40,11 +38,17 @@ OTHER_INDICATORS = [
     'number_teachers_rate',  # separate plot for one country info betwee female male for secondary and primary
 ]
 
-
+DATES = sorted(df.index.get_level_values('year').unique())
+GROUPS = {
+    'region': sorted(df[('region', 'total', 'total')].unique()),
+    'income_group': sorted(df[('income_group', 'total', 'total')].unique())
+}
 INDICATORS = ['learning_outcome', 'completion_rate', 'literacy_rate', 'school_enrollment', 'pupil_teacher_ratio']
 BY = ['gdppc', 'population', 'education_spent', 'pupil_teacher_ratio', 'expenditure_per_student_rate']
 COLOR_BY = ['region', 'income_group']
 INFO_ITEMS = ['country_name', 'population', 'education_expenditure_gdp_rate', 'number_teachers']
+LEVELS = ['total', 'primary', 'secondary', 'tertiary']
+GENDER = ['total', 'female', 'male']
 
 source = ColumnDataSource(df.xs(DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender')))
 
@@ -57,9 +61,13 @@ def update_view(attr, old, new):
 
 
 def update_data(attr, old, new):
-    source.data = (df.xs(slider_year.value, level='year')
-                   .xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender')))
+    print(select_level.value)
+    print(select_gender.value)#
+    print(df.xs(slider_year.value, level='year').xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender')))
+    source.data = df.xs(slider_year.value, level='year').xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender'))
 
+
+# Define Widgets:
 
 # year slider
 slider_year = Slider(
@@ -81,14 +89,14 @@ select_color.on_change('value', update_view)
 select_indicator = Select(
     title='Indicator',
     value='learning_outcome',
-    options=INDICATORS
+    options=create_options(INDICATORS)
 )
 select_indicator.on_change('value', update_view)
 
 select_by = Select(
     title='By',
     value='gdppc',
-    options=INDICATORS
+    options=create_options(BY)
 )
 select_by.on_change('value', update_view)
 
@@ -97,7 +105,7 @@ select_by.on_change('value', update_view)
 select_level = Select(
     title='Education Level',
     value='total',
-    options=['total', 'primary', 'secondary', 'tertiary']
+    options=create_options(LEVELS)
 )
 select_level.on_change('value', update_data)
 
@@ -106,7 +114,7 @@ select_level.on_change('value', update_data)
 select_gender = Select(
     title='Gender',
     value='total',
-    options=['total', 'female', 'male']
+    options=create_options(GENDER)
 )
 select_gender.on_change('value', update_data)
 
