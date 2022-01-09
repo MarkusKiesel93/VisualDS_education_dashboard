@@ -18,3 +18,7 @@ teachers_primary_total - teachers_primary_female
 
 # run boke server
 bokeh serve --show myapp.py
+
+ToDos:
+* make year selection a range or a point
+* callbacks for tab and hover

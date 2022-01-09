@@ -9,14 +9,21 @@ from bokeh.io import show, output_notebook
 from data import get_merged_data, get_geo_data
 
 df = get_merged_data(year_as_datetime=False)
-df.head()
 
 
-def select_range(indicator, level='total', gender='total', log=False):
+# Define helper functions:
+
+
+def select_range(indicator, level='total', gender='total'):
     min = df[(indicator, level, gender)].min() * 0.9
     max = df[(indicator, level, gender)].max() * 1.1
 
     return min, max
+
+
+def format_indicator(indicator):
+    words = indicator.split()
+    return ' '.join(words.capitalize())
 
 
 DATES = sorted(df.index.get_level_values('year').unique())
@@ -24,8 +31,20 @@ GROUPS = {
     'region': sorted(df[('region', 'total', 'total')].unique()),
     'income_group': sorted(df[('income_group', 'total', 'total')].unique())
 }
-INDICATORS = sorted(df.columns.get_level_values('indicator').unique())
 
+# todo: do something with this values:
+OTHER_INDICATORS = [
+    'compulsory_education_duration',  # separate plot maby compare counties
+    'education_pupils_rate'   # separate plot for one country info betwee female male for secondary and primary
+    'expenditure_rate',  # separate plot for one country info between primary, secondary, and tertiary
+    'number_teachers_rate',  # separate plot for one country info betwee female male for secondary and primary
+]
+
+
+INDICATORS = ['learning_outcome', 'completion_rate', 'literacy_rate', 'school_enrollment', 'pupil_teacher_ratio']
+BY = ['gdppc', 'population', 'education_spent', 'pupil_teacher_ratio', 'expenditure_per_student_rate']
+COLOR_BY = ['region', 'income_group']
+INFO_ITEMS = ['country_name', 'population', 'education_expenditure_gdp_rate', 'number_teachers']
 
 source = ColumnDataSource(df.xs(DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender')))
 
@@ -33,7 +52,8 @@ color_mapper = LinearColorMapper(palette=Category10[7])
 
 
 def update_view(attr, old, new):
-    layout.children[1] = scatter()
+    plots.children[0].children[1] = scatter()
+    # todo: add choropleth
 
 
 def update_data(attr, old, new):
@@ -90,12 +110,12 @@ select_gender = Select(
 )
 select_gender.on_change('value', update_data)
 
+
 def scatter():
     fig = figure(
         height=400,
         width=800,
-        tools='hover,tap,pan,crosshair,box_zoom,\
-            wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
+        tools='hover,tap,pan,box_zoom,wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
         toolbar_location='above',
         x_axis_type='log',
         y_range=select_range(select_indicator.value),
@@ -140,10 +160,9 @@ def choropleth():
     geo_source = GeoJSONDataSource(geojson=geo_data.to_json())
 
     fig = figure(
-        tools='hover,tap,pan,crosshair,box_zoom,\
-            wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
-        plot_width=900, 
         plot_height=500,
+        plot_width=900,
+        tools='hover,tap,wheel_zoom,zoom_in,zoom_out,save,reset',
         x_axis_location=None,
         y_axis_location=None)
     fig.grid.visible = False
@@ -196,10 +215,11 @@ def choropleth():
 
 
 tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_color)
+
 plots = layout(
-    row(tools, column(scatter())),
+    row(tools, scatter()),
     row(choropleth())
 )
 
 curdoc().add_root(plots)
-curdoc().title = 'Dashboard'
+curdoc().title = 'World Education Dashboard'
