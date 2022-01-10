@@ -48,6 +48,14 @@ def get_education_meta():
 
     df.columns = create_multi_index(df.columns)
 
+    levels = ['primary', 'secondary', 'tertiary', 'total']
+    genders = ['male', 'female', 'total']
+    for level in levels:
+        for gender in genders:
+            df[('region', level, gender)] = df[('region', 'total', 'total')]
+            df[('income_group', level, gender)] = df[('income_group', 'total', 'total')]
+            df[('country_name', level, gender)] = df[('country_name', 'total', 'total')]
+
     return df
 
 
