@@ -12,20 +12,70 @@ df = get_merged_data(year_as_datetime=False)
 
 # todo: compute everything beforehand and use from dicts instead
 LOOOKUP = {
-    'learning_outcome': {
-        'not_present': {
-            'level': ['bla']
+    'indicator': {
+        'learning_outcome': {
+            'range': 'auto',
+            'level_not_present': ['tertiary'],
+            'gender_not_present': [],
         },
-        'range': ()
+        'completion_rate': {
+            'range': 'rate',
+            'level_not_present': [],
+            'gender_not_present': [],
+        },
+        'literacy_rate': {
+            'range': 'rate',
+            'level_not_present': ['primary', 'secondary', 'tertiary'],
+            'gender_not_present': [],
+        },
+        'pupil_teacher_ratio': {
+            'range': 'rate',
+            'level_not_present': ['total'],
+            'gender_not_present': ['female', 'male']
+        }
+    },
+    'by': {
+        'gdppc': {
+            'range': 'auto',
+            'level_not_present': [],
+            'gender_not_present': [],
+        },
+        'population': {
+            'range': 'auto',
+            'level_not_present': [],
+            'gender_not_present': [],
+        },
+        'education_spent': {
+            'range': 'auto',
+            'level_not_present': [],
+            'gender_not_present': [],
+        },
+        'pupil_teacher_ratio': {
+            'range': 'rate',
+            'level_not_present': [],
+            'gender_not_present': [],
+        },
+        'expenditure_per_student_rate': {
+            'range': 'rate',
+            'level_not_present': [],
+            'gender_not_present': [],
+        },
     }
 }
 
 
 # define helper functions:
-def select_range(indicator, level, gender):
-    # todo: just use source and more intelligent setting of min
-    min = df[(indicator, level, gender)].min() * 0.9
-    max = df[(indicator, level, gender)].max() * 1.1
+def select_range(type, value, level, gender):
+    range_type = LOOOKUP[type][value]['range']
+    if range_type == 'auto':
+        if type == 'indicator':
+            inicator = select_indicator.value
+        else:
+            inicator = select_by.value
+        min = df[(inicator, level, gender)].min() * 0.9
+        max = df[(inicator, level, gender)].max() * 1.1
+    else:
+        min, max = 0, 105
 
     return min, max
 
@@ -59,8 +109,16 @@ def create_select_widget(title, options):
     )
 
 
+def create_options(type, options):
+    restricted_options = options.copy()
+    for value in LOOOKUP['indicator'][select_indicator.value][f'{type}_not_present']:
+        restricted_options.remove(value)
+    for value in LOOOKUP['by'][select_by.value][f'{type}_not_present']:
+        restricted_options.remove(value)
+    return restricted_options
+
+
 def update_view(attr, old, new):
-    # todo: get dashbord as argument
     dashboard.children[0].children[1] = scatter()
     dashboard.children[1] = choropleth()
 
@@ -68,6 +126,15 @@ def update_view(attr, old, new):
 def update_data(attr, old, new):
     source.data = df.xs(slider_year.value, level='year').xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender'))
 
+
+def update_view_tools(attr, old, new):
+    level_options = create_options('level', LEVELS)
+    select_level.options = level_options
+    select_level.value = level_options[0]
+    gender_options = create_options('gender', GENDER)
+    select_gender.options = gender_options
+    select_gender.value = level_options[0]
+    update_view(attr, old, new)
 
 def use_scale(x_value):
     if x_value.split('_')[-1] in ['rate', 'ratio']:
@@ -103,22 +170,6 @@ INFO_ITEMS = ['country_name', 'population', 'education_expenditure_gdp_rate', 'n
 LEVELS = ['total', 'primary', 'secondary', 'tertiary']
 GENDER = ['total', 'female', 'male']
 
-# todo: set possible combinations
-NOT_PRESENT = {
-    'indicators': {
-        'learning_outcome': {
-            'level': ['tertiary']
-        },
-        'literacy_rate': {
-            'level': ['primary', 'secondary', 'tertiary']
-        },
-        'pupil_teacher_ratio': {
-            'level': ['total'],
-            'gender': ['female', 'male']
-        }
-    }
-}
-
 
 source = ColumnDataSource(df.xs(DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender')))
 
@@ -129,13 +180,13 @@ slider_year = create_slider_widget('Year', DATES)
 select_indicator = create_select_widget('Indicator:', INDICATORS)
 select_by = create_select_widget('By:', BY)
 select_color = create_select_widget('Color by:', COLOR_BY)
-select_level = create_select_widget('Education Level:', LEVELS)
-select_gender = create_select_widget('Gender:', GENDER)
+select_level = create_select_widget('Education Level:', create_options('level', LEVELS))
+select_gender = create_select_widget('Gender:', create_options('gender', GENDER))
 
 # add callbacks to widgets
 slider_year.on_change('value', update_data)
-select_indicator.on_change('value', update_view)  # todo: reset level and gender
-select_by.on_change('value', update_view)  # todo: reset level and gender
+select_indicator.on_change('value', update_view_tools)  # todo: reset level and gender
+select_by.on_change('value', update_view_tools)  # todo: reset level and gender
 select_color.on_change('value', update_view)
 select_level.on_change('value', update_data)
 select_gender.on_change('value', update_data)
@@ -149,8 +200,8 @@ def scatter():
         tools='hover,tap,pan,box_zoom,wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
         toolbar_location='above',
         x_axis_type=use_scale(select_by.value),
-        y_range=select_range(select_indicator.value, select_level.value, select_gender.value),
-        x_range=select_range(select_by.value, select_level.value, select_gender.value))
+        y_range=select_range('indicator', select_indicator.value, select_level.value, select_gender.value),
+        x_range=select_range('by', select_by.value, select_level.value, select_gender.value))
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.xaxis.axis_label = format_label(select_by.value, x_label=True)
     fig.add_layout(Legend(), 'right')
@@ -175,6 +226,7 @@ def scatter():
         fill_alpha=0.5)
 
     return fig
+
 
 # chropleth function
 def choropleth():
