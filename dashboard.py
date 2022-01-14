@@ -9,9 +9,10 @@ from bokeh.io import show, output_notebook
 from data import get_merged_data, get_geo_data
 
 df = get_merged_data(year_as_datetime=False)
+df_geo = get_geo_data()
 
-# todo: compute everything beforehand and use from dicts instead
-LOOOKUP = {
+
+SETTINGS = {
     'indicator': {
         'learning_outcome': {
             'range': 'auto',
@@ -50,14 +51,9 @@ LOOOKUP = {
             'level_not_present': [],
             'gender_not_present': [],
         },
-        'pupil_teacher_ratio': {
-            'range': 'rate',
-            'level_not_present': [],
-            'gender_not_present': [],
-        },
         'expenditure_per_student_rate': {
             'range': 'rate',
-            'level_not_present': [],
+            'level_not_present': ['total'],
             'gender_not_present': [],
         },
     }
@@ -66,7 +62,8 @@ LOOOKUP = {
 
 # define helper functions:
 def select_range(type, value, level, gender):
-    range_type = LOOOKUP[type][value]['range']
+    print(type, value, level, gender)
+    range_type = SETTINGS[type][value]['range']
     if range_type == 'auto':
         if type == 'indicator':
             inicator = select_indicator.value
@@ -111,9 +108,9 @@ def create_select_widget(title, options):
 
 def create_options(type, options):
     restricted_options = options.copy()
-    for value in LOOOKUP['indicator'][select_indicator.value][f'{type}_not_present']:
+    for value in SETTINGS['indicator'][select_indicator.value][f'{type}_not_present']:
         restricted_options.remove(value)
-    for value in LOOOKUP['by'][select_by.value][f'{type}_not_present']:
+    for value in SETTINGS['by'][select_by.value][f'{type}_not_present']:
         restricted_options.remove(value)
     return restricted_options
 
@@ -124,7 +121,10 @@ def update_view(attr, old, new):
 
 
 def update_data(attr, old, new):
+    subset = df.xs(slider_year.value, level='year').xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender'))
+    subset_geo = df_geo.join(subset, on='country_code')
     source.data = df.xs(slider_year.value, level='year').xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender'))
+    geo_source.geojson = subset_geo.to_json()
 
 
 def update_view_tools(attr, old, new):
@@ -133,7 +133,7 @@ def update_view_tools(attr, old, new):
     select_level.value = level_options[0]
     gender_options = create_options('gender', GENDER)
     select_gender.options = gender_options
-    select_gender.value = level_options[0]
+    select_gender.value = gender_options[0]
     update_view(attr, old, new)
 
 def use_scale(x_value):
@@ -163,15 +163,19 @@ GROUPS = {
     'region': sorted(df[('region', 'total', 'total')].unique()),
     'income_group': sorted(df[('income_group', 'total', 'total')].unique())
 }
+# todo use settings instead
 INDICATORS = ['learning_outcome', 'completion_rate', 'literacy_rate', 'pupil_teacher_ratio']
-BY = ['gdppc', 'population', 'education_spent', 'pupil_teacher_ratio', 'expenditure_per_student_rate']
+BY = ['gdppc', 'population', 'education_spent', 'expenditure_per_student_rate']
 COLOR_BY = ['region', 'income_group']
 INFO_ITEMS = ['country_name', 'population', 'education_expenditure_gdp_rate', 'number_teachers']
 LEVELS = ['total', 'primary', 'secondary', 'tertiary']
 GENDER = ['total', 'female', 'male']
 
 
-source = ColumnDataSource(df.xs(DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender')))
+subset = df.xs(DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
+subset_geo = df_geo.join(subset, on='country_code')
+source = ColumnDataSource(subset)
+geo_source = GeoJSONDataSource(geojson=subset_geo.to_json())
 
 color_mapper = LinearColorMapper(palette=Category10[7])
 
@@ -230,12 +234,6 @@ def scatter():
 
 # chropleth function
 def choropleth():
-    geo_data = get_geo_data()
-    df = get_merged_data(from_year=2020, year_as_datetime=False)
-    df = df.xs(2020, level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
-    geo_data = geo_data.join(df, on='country_code')
-    geo_source = GeoJSONDataSource(geojson=geo_data.to_json())
-
     fig = figure(
         plot_height=500,
         plot_width=900,
@@ -282,7 +280,7 @@ def choropleth():
     return fig
 
 
-## add tools and different plots to oune dashboard
+# add tools and different plots to oune dashboard
 tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_color)
 dashboard = layout(
     row(tools, scatter()),

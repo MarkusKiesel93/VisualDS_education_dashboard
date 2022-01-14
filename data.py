@@ -191,6 +191,7 @@ def get_gdp_data():
     for level in levels:
         for gender in genders:
             df[('gdppc', level, gender)] = df[('gdppc', 'total', 'total')]
+            df[('population', level, gender)] = df[('population', 'total', 'total')]
 
     return df
 
@@ -206,6 +207,11 @@ def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=T
     df = df.join(gdp, on=['country_code', 'year'])
 
     df[('education_spent', 'total', 'total')] = df[('gdppc', 'total', 'total')] * df[('education_expenditure_gdp_rate', 'total', 'total')] /  100
+    levels = ['primary', 'secondary', 'tertiary', 'total']
+    genders = ['male', 'female', 'total']
+    for level in levels:
+        for gender in genders:
+            df[('education_spent', level, gender)] = df[('education_spent', 'total', 'total')]
 
     if ffill:
         df = df.sort_index(level='year')
