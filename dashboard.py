@@ -2,7 +2,7 @@ from bokeh.transform import factor_cmap
 from bokeh.models import Legend, LinearColorMapper
 from bokeh.palettes import Category10, Greens9
 from bokeh.layouts import column, row, layout
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
+from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup, TapTool
 from bokeh.plotting import figure, curdoc
 
 from data import get_merged_data, get_geo_data
@@ -76,6 +76,11 @@ def update_view(attr, old, new):
     dashboard.children[1] = choropleth()
 
 
+def test(attr, old, new):
+    print(new)
+    print(source.to_df().iloc[new])
+
+
 def update_data(attr, old, new):
     subset = (df.xs(slider_year.value, level='year')
               .xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender')))
@@ -130,7 +135,7 @@ select_color.on_change('value', update_view)
 select_level.on_change('value', update_data)
 select_gender.on_change('value', update_data)
 checkbox_group.on_change('active', update_view)
-
+source.selected.on_change('indices', test)
 
 # scatterplot function
 def scatter():
