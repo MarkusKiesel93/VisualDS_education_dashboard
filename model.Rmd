@@ -1,0 +1,154 @@
+---
+title: "Visual Data Science"
+subtitle: "Model Education Data"
+author: "Markus Kiesel | 1228952"
+date: "18.01.2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(ech =TRUE)
+library(glmnet)
+library(Metrics)
+```
+
+First we load the data for all total indicators and preprocess it.
+
+```{r}
+# load data
+df <- read.csv("./data/data_total.csv")
+# drop country code and name
+df <- subset(df, select=-c(country_code, country_name))
+# region and income group to factors
+df <- transform(
+  df,
+  region <- as.factor(region),
+  income_group <- as.factor(income_group)
+)
+# drop rows wit null values
+df <- na.omit(df)
+
+# have a look at structure
+str(df)
+
+# summary
+summary(df)
+
+# Train-Test Split
+set.seed(1228052)
+n <- nrow(df)
+train_index <- sample(1:n, n * 0.8)
+test_index <- c(1:n)[-train_index]
+x_train <- subset(df, select=-c(learning_outcome))[train_index,]
+y_train <- df[train_index, "learning_outcome"]
+x_test <- subset(df, select=-c(learning_outcome))[test_index,]
+y_test <- df[test_index, "learning_outcome"]
+```
+
+
+```{r}
+lasso <- glmnet(x=x_train, y=y_train)
+```
+
+```{r}
+plot(lasso)
+```
+
+```{r}
+model_lasso_cv <- cv.glmnet(x=data.matrix(x_train), y=y_train)
+plot(model_lasso_cv)
+```
+
+```{r}
+pred_lasso <- predict(model_lasso_cv, newx=data.matrix(x_test), s="lambda.1se")
+rmse(y_test, pred_lasso)
+
+```
+
+```{r}
+plot(y_test, pred_lasso, main="Lasso Regression")
+abline(c(0,1))
+```
+
+```{r}
+coef(model_lasso_cv)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+</div></pre>

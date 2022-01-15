@@ -225,5 +225,11 @@ def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=T
 
 
 if __name__ == '__main__':
-    df = get_merged_data()
+    df = get_merged_data(year_as_datetime=False)
     df.to_csv(DATA_PATH / 'data.csv')
+
+    df_2020_total = df.xs(2020, level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
+    df_2020_total.to_csv(DATA_PATH / 'data_2020_total.csv')
+
+    df_total = df.xs(('total', 'total'), axis=1, level=('level', 'gender'))
+    df_total.to_csv(DATA_PATH / 'data_total.csv')
