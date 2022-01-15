@@ -4,7 +4,8 @@ from bokeh.palettes import Category10, Greens9
 from bokeh.layouts import column, row, layout
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
 from bokeh.plotting import figure, curdoc
-
+from bokeh.transform import dodge
+import pandas as pd
 from data import get_merged_data, get_geo_data
 from config import Config
 
@@ -82,12 +83,14 @@ def create_options(type, options):
 
 def update_view(attr, old, new):
     dashboard.children[0].children[1] = scatter()
-    dashboard.children[1] = choropleth()
+    dashboard.children[1].children[0] = choropleth()
 
 
 def test(attr, old, new):
-    print(new)
-    print(source.to_df().iloc[new])
+    data = source.to_df().iloc[new]
+    dashboard.children[0].children[2] = lines(data['country_code'].values)
+    dashboard.children[1].children[1] = bars(data)
+    dashboard.children[1].children[2] = bar_charts_level(data)
 
 
 def update_data(attr, old, new):
@@ -229,11 +232,77 @@ def choropleth():
     return fig
 
 
+# todo: create lines for goups by default and if selected create for each country
+def lines(countries=[]):
+    fig = figure(
+        plot_height=500,
+        plot_width=900
+    )
+    for country in countries:
+        fig.line('year', 'learning_outcome_total_total', source=ColumnDataSource(df.xs(country, level='country_code')))
+
+    return fig
+
+
+def bars(data=pd.DataFrame()):
+    if data.shape[0] > 0:
+        fig = figure(
+            x_range=data['country_name'],
+            y_range=(0, 700),
+            title='Fruit Counts by Year',
+            height=350,
+            toolbar_location=None,
+            tools=""
+        )
+        source = ColumnDataSource(data=data)
+
+        fig.vbar(x=dodge('country_name', -0.25, range=fig.x_range), top='learning_outcome_total_female', source=source,
+                 width=0.2, color="#d332b0", legend_label="female")
+
+        fig.vbar(x=dodge('country_name',  0.0,  range=fig.x_range), top='learning_outcome_total_total', source=source,
+                 width=0.2, color="#3ca815", legend_label="total")
+
+        fig.vbar(x=dodge('country_name',  0.25, range=fig.x_range), top='learning_outcome_total_male', source=source,
+                 width=0.2, color="#3265d3", legend_label="male")
+    else:
+        fig = figure()
+    return fig
+
+
+# todo change gender by selection
+def bar_charts_level(data=pd.DataFrame()):
+    if data.shape[0] > 0:
+        fig = figure(
+            x_range=data['country_name'],
+            y_range=(0, 700),
+            title='Fruit Counts by Year',
+            height=350,
+            toolbar_location=None,
+            tools=""
+        )
+        source = ColumnDataSource(data=data)
+
+        fig.vbar(x=dodge('country_name', -0.25, range=fig.x_range), top='learning_outcome_total_total', source=source,
+                 width=0.2, color="#d332b0", legend_label="total")
+
+        fig.vbar(x=dodge('country_name',  -0.05,  range=fig.x_range), top='learning_outcome_primary_total', source=source,
+                 width=0.2, color="#3ca815", legend_label="primary")
+
+        fig.vbar(x=dodge('country_name',  0.05, range=fig.x_range), top='learning_outcome_secondary_total', source=source,
+                 width=0.2, color="#3265d3", legend_label="secondary")
+
+        fig.vbar(x=dodge('country_name',  0.25, range=fig.x_range), top='learning_outcome_tertiary_total', source=source,
+                 width=0.2, color="#3265d1", legend_label="tertiary")
+    else:
+        fig = figure()
+    return fig
+
+
 # add tools and different plots to oune dashboard
 tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_color, checkbox_group)
 dashboard = layout(
-    row(tools, scatter()),
-    row(choropleth())
+    row(tools, scatter(), lines()),
+    row(choropleth(), bars(), bar_charts_level()),
 )
 
 curdoc().add_root(dashboard)
