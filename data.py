@@ -1,3 +1,5 @@
+from lib2to3.pgen2.pgen import DFAState
+from locale import D_FMT
 import pandas as pd
 import geopandas as gpd
 from pathlib import Path
@@ -28,7 +30,7 @@ def get_education_indicators(without_info=True):
     return df
 
 
-def get_education_meta():
+def get_education_meta(multi_index):
     PATH = DATA_PATH / 'world_bank' / 'Metadata_Country_API_4_DS2_en_csv_v2_3160069.csv'
 
     df = pd.read_csv(PATH)
@@ -46,15 +48,16 @@ def get_education_meta():
     # only Venezuela income_group missing (online reseach suggests "Lower middle income")
     df.income_group = df.income_group.fillna('Lower middle income')
 
-    df.columns = create_multi_index(df.columns)
+    if multi_index:
+        df.columns = create_multi_index(df.columns)
 
-    levels = ['primary', 'secondary', 'tertiary', 'total']
-    genders = ['male', 'female', 'total']
-    for level in levels:
-        for gender in genders:
-            df[('region', level, gender)] = df[('region', 'total', 'total')]
-            df[('income_group', level, gender)] = df[('income_group', 'total', 'total')]
-            df[('country_name', level, gender)] = df[('country_name', 'total', 'total')]
+        levels = ['primary', 'secondary', 'tertiary', 'total']
+        genders = ['male', 'female', 'total']
+        for level in levels:
+            for gender in genders:
+                df[('region', level, gender)] = df[('region', 'total', 'total')]
+                df[('income_group', level, gender)] = df[('income_group', 'total', 'total')]
+                df[('country_name', level, gender)] = df[('country_name', 'total', 'total')]
 
     return df
 
@@ -196,13 +199,12 @@ def get_gdp_data():
     return df
 
 
-def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=True):
-    edu = get_education_data()
-    edu_meta = get_education_meta()
+def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=True, multi_index=False):
+    df = get_education_data()
+    edu_meta = get_education_meta(multi_index)
     hlo = get_hlo_data()
     gdp = get_gdp_data()
 
-    df = edu.join(edu_meta, how='inner', on='country_code')
     df = df.join(hlo)
     df = df.join(gdp, on=['country_code', 'year'])
 
@@ -220,6 +222,11 @@ def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=T
     df = df[df.index.isin([year for year in range(from_year, 2021)], level='year')]
     if year_as_datetime:
         df.index = df.index.set_levels([df.index.levels[0], pd.to_datetime(df.index.levels[1], format='%Y')])
+
+    if not multi_index:
+        df.columns = ['_'.join(list(levels)) for levels in df.columns]
+
+    df = df.join(edu_meta, how='inner', on='country_code')
 
     return df
 

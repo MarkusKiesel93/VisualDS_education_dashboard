@@ -4,8 +4,8 @@ class Config():
     def __init__(self, df):
         self.DATES = sorted(df.index.get_level_values('year').unique())
         self.GROUPS = {
-            'region': sorted(df[('region', 'total', 'total')].unique()),
-            'income_group': sorted(df[('income_group', 'total', 'total')].unique())
+            'region': sorted(df['region'].unique()),
+            'income_group': sorted(df['income_group'].unique())
         }
 
     INDICATORS = {

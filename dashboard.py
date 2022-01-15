@@ -10,18 +10,26 @@ from config import Config
 
 # load datasets
 df = get_merged_data(year_as_datetime=False)
+df2 = get_merged_data(year_as_datetime=False, multi_index=True)
 df_geo = get_geo_data()
 
 settings = Config(df)
 
+
+def tocol(indicator, level=None, gender=None):
+    if level and gender:
+        levels = [indicator, level, gender]
+    else:
+        levels = [indicator, select_level.value, select_gender.value]
+    return '_'.join(levels)
 
 # define helper functions:
 def select_range(config, indicator, level, gender):
     if config[indicator]['range'] == 'rate':
         min, max = 0, 105
     else:
-        min = df[(indicator, level, gender)].min() * 0.9
-        max = df[(indicator, level, gender)].max() * 1.1
+        min = df2[(indicator, level, gender)].min() * 0.9
+        max = df2[(indicator, level, gender)].max() * 1.1
 
     return min, max
 
@@ -65,9 +73,11 @@ def create_checkbox_widget(labels, active):
 def create_options(type, options):
     restricted_options = options.copy()
     for value in settings.INDICATORS[select_indicator.value][f'{type}_not_present']:
-        restricted_options.remove(value)
+        if value in restricted_options:
+            restricted_options.remove(value)
     for value in settings.BY[select_by.value][f'{type}_not_present']:
-        restricted_options.remove(value)
+        if value in restricted_options:
+            restricted_options.remove(value)
     return restricted_options
 
 
@@ -82,9 +92,10 @@ def test(attr, old, new):
 
 
 def update_data(attr, old, new):
-    subset = (df.xs(slider_year.value, level='year')
+    subset = df.xs(slider_year.value, level='year')
+    subset2 = (df2.xs(slider_year.value, level='year')
               .xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender')))
-    subset_geo = df_geo.join(subset, on='country_code')
+    subset_geo = df_geo.join(subset2, on='country_code')
     source.data = subset
     geo_source.geojson = subset_geo.to_json()
 
@@ -111,8 +122,9 @@ def create_tooltips(values):
     return tooltips
 
 
-subset = df.xs(settings.DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
-subset_geo = df_geo.join(subset, on='country_code')
+subset = df.xs(settings.DATES[-1], level='year')
+subset2 = df2.xs(settings.DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
+subset_geo = df_geo.join(subset2, on='country_code')
 source = ColumnDataSource(subset)
 geo_source = GeoJSONDataSource(geojson=subset_geo.to_json())
 
@@ -154,12 +166,12 @@ def scatter():
     fig.legend.title = format_label(select_color.value)
 
     # set tooltips
-    fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
+    # fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
 
     # create scatterplot
     fig.scatter(
-        x=select_by.value,
-        y=select_indicator.value,
+        x=tocol(select_by.value),
+        y=tocol(select_indicator.value),
         source=source,
         color=factor_cmap(
             field_name=select_color.value,
@@ -208,7 +220,7 @@ def choropleth():
     )
 
     # set tooltips
-    fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
+    # fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
 
     color_bar = ColorBar(
         color_mapper=color_mapper,
