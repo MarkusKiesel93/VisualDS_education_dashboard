@@ -2,7 +2,7 @@ from bokeh.transform import factor_cmap
 from bokeh.models import Legend, LinearColorMapper
 from bokeh.palettes import Category10, Greens9
 from bokeh.layouts import column, row, layout
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup, TapTool
+from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
 from bokeh.plotting import figure, curdoc
 
 from data import get_merged_data, get_geo_data
@@ -10,7 +10,6 @@ from config import Config
 
 # load datasets
 df = get_merged_data(year_as_datetime=False)
-df2 = get_merged_data(year_as_datetime=False, multi_index=True)
 df_geo = get_geo_data()
 
 settings = Config(df)
@@ -28,8 +27,8 @@ def select_range(config, indicator, level, gender):
     if config[indicator]['range'] == 'rate':
         min, max = 0, 105
     else:
-        min = df2[(indicator, level, gender)].min() * 0.9
-        max = df2[(indicator, level, gender)].max() * 1.1
+        min = df[tocol(indicator, level, gender)].min() * 0.9
+        max = df[tocol(indicator, level, gender)].max() * 1.1
 
     return min, max
 
@@ -93,9 +92,7 @@ def test(attr, old, new):
 
 def update_data(attr, old, new):
     subset = df.xs(slider_year.value, level='year')
-    subset2 = (df2.xs(slider_year.value, level='year')
-              .xs((select_level.value, select_gender.value), axis=1, level=('level', 'gender')))
-    subset_geo = df_geo.join(subset2, on='country_code')
+    subset_geo = df_geo.join(subset, on='country_code')
     source.data = subset
     geo_source.geojson = subset_geo.to_json()
 
@@ -117,14 +114,13 @@ def update_view_tools(attr, old, new):
 
 def create_tooltips(values):
     # todo: maybe use info items here as well
-    tooltips = [(format_label(value), f'@{value}') for value in values]
+    tooltips = [(format_label(value), '@' + tocol(value)) for value in values]
     tooltips.insert(0, ('Country', '@country_name'))
     return tooltips
 
 
 subset = df.xs(settings.DATES[-1], level='year')
-subset2 = df2.xs(settings.DATES[-1], level='year').xs(('total', 'total'), axis=1, level=('level', 'gender'))
-subset_geo = df_geo.join(subset2, on='country_code')
+subset_geo = df_geo.join(subset, on='country_code')
 source = ColumnDataSource(subset)
 geo_source = GeoJSONDataSource(geojson=subset_geo.to_json())
 
@@ -166,7 +162,7 @@ def scatter():
     fig.legend.title = format_label(select_color.value)
 
     # set tooltips
-    # fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
+    fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
 
     # create scatterplot
     fig.scatter(
@@ -213,14 +209,14 @@ def choropleth():
         ys="ys",
         source=geo_source,
         fill_alpha=0.7,
-        fill_color={'field': select_indicator.value, 'transform': color_mapper},
+        fill_color={'field': tocol(select_indicator.value), 'transform': color_mapper},
         line_color='white',
         line_width=0.3,
         hover_line_color='black',
     )
 
     # set tooltips
-    # fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
+    fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
 
     color_bar = ColorBar(
         color_mapper=color_mapper,
