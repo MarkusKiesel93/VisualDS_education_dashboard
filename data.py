@@ -199,7 +199,7 @@ def get_gdp_data():
     return df
 
 
-def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=True, multi_index=False):
+def get_merged_data(from_year=2000, ffill=True, indexed=True, year_as_datetime=False, multi_index=False):
     df = get_education_data()
     edu_meta = get_education_meta(multi_index)
     hlo = get_hlo_data()

@@ -1,5 +1,5 @@
 from bokeh.transform import factor_cmap
-from bokeh.models import Legend, LinearColorMapper
+from bokeh.models import Legend, LinearColorMapper, CategoricalColorMapper
 from bokeh.palettes import Category10, Greens9
 from bokeh.layouts import column, row, layout
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
@@ -10,13 +10,15 @@ from data import get_merged_data, get_geo_data
 from config import Config
 
 # load datasets
-df = get_merged_data(year_as_datetime=False)
+df = get_merged_data()
 df_geo = get_geo_data()
 
 settings = Config(df)
 
 
-def tocol(indicator, level=None, gender=None):
+def indicator_col(indicator=None, level=None, gender=None):
+    if not indicator:
+        indicator = select_indicator.value
     if level and gender:
         levels = [indicator, level, gender]
     else:
@@ -24,12 +26,12 @@ def tocol(indicator, level=None, gender=None):
     return '_'.join(levels)
 
 # define helper functions:
-def select_range(config, indicator, level, gender):
+def select_range(config, indicator, level=None, gender=None):
     if config[indicator]['range'] == 'rate':
         min, max = 0, 105
     else:
-        min = df[tocol(indicator, level, gender)].min() * 0.9
-        max = df[tocol(indicator, level, gender)].max() * 1.1
+        min = df[indicator_col(indicator, level, gender)].min() * 0.9
+        max = df[indicator_col(indicator, level, gender)].max() * 1.1
 
     return min, max
 
@@ -84,13 +86,14 @@ def create_options(type, options):
 def update_view(attr, old, new):
     dashboard.children[0].children[1] = scatter()
     dashboard.children[1].children[0] = choropleth()
+    dashboard.children[0].children[2] = line_chart()
 
 
 def test(attr, old, new):
     data = source.to_df().iloc[new]
-    dashboard.children[0].children[2] = lines(data['country_code'].values)
-    dashboard.children[1].children[1] = bars(data)
-    dashboard.children[1].children[2] = bar_charts_level(data)
+    dashboard.children[0].children[2] = line_chart(data['country_code'].values)
+    dashboard.children[1].children[1] = bar_chart_gender(data)
+    dashboard.children[1].children[2] = bar_chart_level(data)
 
 
 def update_data(attr, old, new):
@@ -98,6 +101,7 @@ def update_data(attr, old, new):
     subset_geo = df_geo.join(subset, on='country_code')
     source.data = subset
     geo_source.geojson = subset_geo.to_json()
+    update_view(attr, old, new)
 
 
 def update_view_tools(attr, old, new):
@@ -117,7 +121,7 @@ def update_view_tools(attr, old, new):
 
 def create_tooltips(values):
     # todo: maybe use info items here as well
-    tooltips = [(format_label(value), '@' + tocol(value)) for value in values]
+    tooltips = [(format_label(value), '@' + indicator_col(value)) for value in values]
     tooltips.insert(0, ('Country', '@country_name'))
     return tooltips
 
@@ -127,13 +131,11 @@ subset_geo = df_geo.join(subset, on='country_code')
 source = ColumnDataSource(subset)
 geo_source = GeoJSONDataSource(geojson=subset_geo.to_json())
 
-color_mapper = LinearColorMapper(palette=Category10[7])
-
 # define widgets
 slider_year = create_slider_widget('Year', settings.DATES)
 select_indicator = create_select_widget('Indicator:', list(settings.INDICATORS.keys()))
 select_by = create_select_widget('By:', list(settings.BY.keys()))
-select_color = create_select_widget('Color by:', settings.COLOR_BY)
+select_color = create_select_widget('Color by:', settings.COLOR_BY)  # todo rename to grouping
 select_level = create_select_widget('Education Level:', create_options('level', settings.LEVELS))
 select_gender = create_select_widget('Gender:', create_options('gender', settings.GENDER))
 checkbox_group = create_checkbox_widget(['Log scale'], [0])
@@ -156,12 +158,11 @@ def scatter():
         tools='hover,tap,pan,box_zoom,wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
         toolbar_location='above',
         x_axis_type='log' if 0 in checkbox_group.active else 'linear',
-        y_range=select_range(settings.INDICATORS, select_indicator.value, select_level.value, select_gender.value),
-        x_range=select_range(settings.BY, select_by.value, select_level.value, select_gender.value))
+        y_range=select_range(settings.INDICATORS, select_indicator.value),
+        x_range=select_range(settings.BY, select_by.value))
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.xaxis.axis_label = format_label(select_by.value, x_label=True)
     fig.add_layout(Legend(), 'right')
-    fig.legend.location = 'top_left'
     fig.legend.title = format_label(select_color.value)
 
     # set tooltips
@@ -169,8 +170,8 @@ def scatter():
 
     # create scatterplot
     fig.scatter(
-        x=tocol(select_by.value),
-        y=tocol(select_indicator.value),
+        x=indicator_col(select_by.value),
+        y=indicator_col(select_indicator.value),
         source=source,
         color=factor_cmap(
             field_name=select_color.value,
@@ -212,7 +213,7 @@ def choropleth():
         ys="ys",
         source=geo_source,
         fill_alpha=0.7,
-        fill_color={'field': tocol(select_indicator.value), 'transform': color_mapper},
+        fill_color={'field': indicator_col(select_indicator.value), 'transform': color_mapper},
         line_color='white',
         line_width=0.3,
         hover_line_color='black',
@@ -232,24 +233,55 @@ def choropleth():
     return fig
 
 
-# todo: create lines for goups by default and if selected create for each country
-def lines(countries=[]):
+# todo: create line_chart for goups by default and if selected create for each country
+def line_chart(countries=[]):
     fig = figure(
-        plot_height=500,
-        plot_width=900
+        plot_height=300,
+        plot_width=700,
+        x_range=(settings.DATES[0], settings.DATES[-1]),
+        y_range=select_range(settings.INDICATORS, select_indicator.value),
+        title='Development by Year'
     )
-    for country in countries:
-        fig.line('year', 'learning_outcome_total_total', source=ColumnDataSource(df.xs(country, level='country_code')))
+    fig.xaxis.axis_label = 'Year'
+    fig.yaxis.axis_label = format_label(select_indicator.value)
+    fig.add_layout(Legend(), 'right')
+    fig.legend.title = format_label(select_color.value)
+
+    # todo: move to somewhere general
+    color_mapper = CategoricalColorMapper(
+        palette=Category10[len(settings.GROUPS[select_color.value])],
+        factors=settings.GROUPS[select_color.value]
+    )
+
+    def get_color(group):
+        return color_mapper.palette[color_mapper.factors.index(group)]
+
+    if len(countries) < 1:
+        data = df.groupby([select_color.value, 'year']).mean().reset_index()
+        for group in settings.GROUPS[select_color.value]:
+            fig.line(
+                'year',
+                indicator_col(),
+                source=ColumnDataSource(data[data[select_color.value] == group]),
+                color=get_color(group),
+                legend_group=select_color.value,
+            )
+
+    else:
+        for country in countries:
+            fig.line('year', 'learning_outcome_total_total', source=ColumnDataSource(df.xs(country, level='country_code')))
 
     return fig
 
 
-def bars(data=pd.DataFrame()):
-    if data.shape[0] > 0:
+def bar_chart_gender(data=pd.DataFrame()):
+    if data.shape[0] < 1:
+        fig = figure()  # todo default groupby plot
+    else:
         fig = figure(
             x_range=data['country_name'],
             y_range=(0, 700),
-            title='Fruit Counts by Year',
+            title='todo',
             height=350,
             toolbar_location=None,
             tools=""
@@ -264,18 +296,19 @@ def bars(data=pd.DataFrame()):
 
         fig.vbar(x=dodge('country_name',  0.25, range=fig.x_range), top='learning_outcome_total_male', source=source,
                  width=0.2, color="#3265d3", legend_label="male")
-    else:
-        fig = figure()
+
     return fig
 
 
 # todo change gender by selection
-def bar_charts_level(data=pd.DataFrame()):
-    if data.shape[0] > 0:
+def bar_chart_level(data=pd.DataFrame()):
+    if data.shape[0] < 1:
+        fig = figure()  # todo default groupby plot
+    else:
         fig = figure(
             x_range=data['country_name'],
             y_range=(0, 700),
-            title='Fruit Counts by Year',
+            title='todo',
             height=350,
             toolbar_location=None,
             tools=""
@@ -293,17 +326,19 @@ def bar_charts_level(data=pd.DataFrame()):
 
         fig.vbar(x=dodge('country_name',  0.25, range=fig.x_range), top='learning_outcome_tertiary_total', source=source,
                  width=0.2, color="#3265d1", legend_label="tertiary")
-    else:
-        fig = figure()
+
     return fig
 
 
 # add tools and different plots to oune dashboard
 tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_color, checkbox_group)
 dashboard = layout(
-    row(tools, scatter(), lines()),
-    row(choropleth(), bars(), bar_charts_level()),
+    row(tools, scatter(), line_chart()),
+    row(choropleth(), bar_chart_gender(), bar_chart_level()),
 )
 
 curdoc().add_root(dashboard)
 curdoc().title = 'World Education Dashboard'
+
+# todo: title by section
+# todo: resize sections and give fixed size
