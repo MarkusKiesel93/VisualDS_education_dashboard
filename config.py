@@ -62,3 +62,15 @@ class Config():
     INFO_ITEMS = ['country_name', 'population', 'education_expenditure_gdp_rate', 'number_teachers']
     LEVELS = ['total', 'primary', 'secondary', 'tertiary']
     GENDER = ['total', 'female', 'male']
+
+    GENDER_COLORS = {
+        'female': '#e377c2',
+        'total': '#ff7f0e',
+        'male': '#1f77b4'
+    }
+    LEVEL_COLORS = {
+        'total': '#ff7f0e',
+        'primary': '#1f77b4',
+        'secondary': '#9467bd',
+        'tertiary': '#d62728'
+    }

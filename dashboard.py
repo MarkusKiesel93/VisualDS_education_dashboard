@@ -308,11 +308,7 @@ def bar_chart_gender(data=pd.DataFrame()):
         fig.xaxis.major_label_orientation = 120
 
         dodge_values = [-0.25, 0.0, 0.25]
-        colors = {
-            'female': '#e377c2',
-            'total': '#ff7f0e',
-            'male': '#1f77b4'
-        }
+
         # todo: only use possible values
         for gender, d in zip(settings.GENDER, dodge_values):
             fig.vbar(
@@ -320,7 +316,7 @@ def bar_chart_gender(data=pd.DataFrame()):
                 top=indicator_col(gender=gender),
                 source=source,
                 width=0.2,
-                color=colors[gender],
+                color=settings.GENDER_COLORS[gender],
                 legend_label=format_label(gender)
             )
 
@@ -364,12 +360,7 @@ def bar_chart_level(data=pd.DataFrame()):
         fig.xaxis.major_label_orientation = 120
 
         dodge_values = [-0.2, -0.1, 0.1, 0.2]
-        colors = {
-            'total': '#ff7f0e',
-            'primary': '#1f77b4',
-            'secondary': '#9467bd',
-            'tertiary': '#d62728'
-        }
+
         # todo: only use possible values
         for level, d in zip(settings.LEVELS, dodge_values):
             fig.vbar(
@@ -377,7 +368,7 @@ def bar_chart_level(data=pd.DataFrame()):
                 top=indicator_col(level=level),
                 source=source,
                 width=0.2,
-                color=colors[level],
+                color=settings.LEVEL_COLORS[level],
                 legend_label=format_label(level)
             )
     else:
