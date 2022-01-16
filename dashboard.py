@@ -16,6 +16,24 @@ df_geo = get_geo_data()
 settings = Config(df)
 
 
+# define helper functions:
+def color_by_group(group):
+    color_mapper = CategoricalColorMapper(
+        palette=Category10[len(settings.GROUPS[select_group.value])],
+        factors=settings.GROUPS[select_group.value]
+    )
+    return color_mapper.palette[color_mapper.factors.index(group)]
+
+
+def color_sequential(n, i):
+    if n < 10:
+        colors = Category10[10]
+        return colors[i % 10]
+    else:
+        colors = Category20[20]
+        return colors[i % 20]
+
+
 def indicator_col(indicator=None, level=None, gender=None):
     if not indicator:
         indicator = select_indicator.value
@@ -26,7 +44,6 @@ def indicator_col(indicator=None, level=None, gender=None):
     return '_'.join([indicator, level, gender])
 
 
-# define helper functions:
 def select_range(config, indicator, level=None, gender=None):
     if config[indicator]['range'] == 'rate':
         min, max = 0, 105
@@ -169,6 +186,7 @@ checkbox_group.on_change('active', update_view)
 source.selected.on_change('indices', test)
 geo_source.selected.on_change('indices', test2)
 
+
 # scatterplot function
 def scatter():
     fig = figure(
@@ -210,6 +228,7 @@ def choropleth():
         plot_height=500,
         plot_width=900,
         tools='hover,tap,wheel_zoom,zoom_in,zoom_out,save,reset',
+        toolbar_location='above',
         x_axis_location=None,
         y_axis_location=None)
     fig.grid.visible = False
@@ -265,23 +284,6 @@ def line_chart(countries=[]):
     fig.add_layout(Legend(), 'right')
     fig.legend.title = format_label(select_group.value)
 
-    # todo: move to somewhere general
-    color_mapper = CategoricalColorMapper(
-        palette=Category10[len(settings.GROUPS[select_group.value])],
-        factors=settings.GROUPS[select_group.value]
-    )
-
-    def get_color(group):
-        return color_mapper.palette[color_mapper.factors.index(group)]
-
-    def get_color2(n, i):
-        if n < 10:
-            colors = Category10[10]
-            return colors[i % 10]
-        else:
-            colors = Category20[20]
-            return colors[i % 20]
-
     if len(countries) < 1:
         data = df.groupby([select_group.value, 'year']).mean().reset_index()
         for group in settings.GROUPS[select_group.value]:
@@ -289,7 +291,7 @@ def line_chart(countries=[]):
                 'year',
                 indicator_col(),
                 source=ColumnDataSource(data[data[select_group.value] == group]),
-                color=get_color(group),
+                color=color_by_group(group),
                 legend_group=select_group.value,
             )
 
@@ -300,7 +302,7 @@ def line_chart(countries=[]):
                 'year',
                 indicator_col(),
                 source=ColumnDataSource(df.xs(country, level='country_code')),
-                color=get_color2(n, i),
+                color=color_sequential(n, i),
                 legend_group='country_name',
             )
         fig.legend.title = format_label('country_name')
@@ -310,7 +312,7 @@ def line_chart(countries=[]):
 
 def bar_chart_gender(data=pd.DataFrame()):
     dodge_values = [-0.25, 0.0, 0.25]
-    
+
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
                                   .groupby([select_group.value]).mean().reset_index())
