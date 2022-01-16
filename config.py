@@ -5,17 +5,15 @@ class Config():
             'region': sorted(df['region'].unique()),
             'income_group': sorted(df['income_group'].unique())
         }
-        self.COL1_WIDTH = self.get_size(self.WIDTH, 2, 3)
-        self.COL2_WIDTH = self.get_size(self.WIDTH, 1, 3)
-        self.COL1_HEIGHT = self.get_size(self.HEIGHT, 1, 2)
-        self.COL2_HEIGHT = self.get_size(self.HEIGHT, 1, 3)
-        self.TOOL_WIDTH = self.get_size(self.COL1_WIDTH, 2, 7)
-
-    def get_size(self, size, numerator, denominator):
-        return int(size * numerator / denominator)
+        self.COL1_WIDTH = int(self.WIDTH * 3 / 5)
+        self.COL2_WIDTH = self.WIDTH - self.COL1_WIDTH
+        self.COL1_HEIGHT = int(self.HEIGHT * 1 / 2)
+        self.COL2_HEIGHT1 = int(self.HEIGHT * 4 / 10)
+        self.COL2_HEIGHT2 = int(self.HEIGHT * 3 / 10)
+        self.TOOL_WIDTH = int(self.COL1_WIDTH * 2 / 7)
 
     HEIGHT = 1000
-    WIDTH = 1800
+    WIDTH = 2000
 
     INDICATORS = {
         'learning_outcome': {

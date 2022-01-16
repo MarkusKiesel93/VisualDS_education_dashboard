@@ -114,19 +114,19 @@ def geo_index(selected_countries):
 
 
 def update_view(attr, old, new):
-    dashboard.children[0].children[1] = scatter()
-    dashboard.children[0].children[2] = line_chart()
-    dashboard.children[1].children[0] = choropleth()
-    dashboard.children[1].children[1] = bar_chart_gender()
-    dashboard.children[1].children[2] = bar_chart_level()
+    dashboard.children[0].children[0].children[0].children[1] = choropleth()
+    dashboard.children[0].children[0].children[1] = scatter()
+    dashboard.children[0].children[1].children[0] = line_chart()
+    dashboard.children[0].children[1].children[1] = bar_chart_gender()
+    dashboard.children[0].children[1].children[2] = bar_chart_level()
 
 
 def test(attr, old, new):
     data = source.to_df().iloc[new]
     selected_countries = data['country_code'].values
-    dashboard.children[0].children[2] = line_chart(selected_countries)
-    dashboard.children[1].children[1] = bar_chart_gender(data)
-    dashboard.children[1].children[2] = bar_chart_level(data)
+    dashboard.children[0].children[1].children[0] = line_chart()
+    dashboard.children[0].children[1].children[1] = bar_chart_gender()
+    dashboard.children[0].children[1].children[2] = bar_chart_level()
     geo_source.selected.indices = geo_index(selected_countries)
 
 
@@ -276,7 +276,7 @@ def choropleth():
 
 def line_chart(countries=[]):
     fig = figure(
-        height=settings.COL2_HEIGHT,
+        height=settings.COL2_HEIGHT1,
         width=settings.COL2_WIDTH,
         x_range=(settings.DATES[0], settings.DATES[-1]),
         y_range=select_range(settings.INDICATORS, select_indicator.value),
@@ -324,7 +324,7 @@ def bar_chart_gender(data=pd.DataFrame()):
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
-            height=settings.COL2_HEIGHT,
+            height=settings.COL2_HEIGHT2,
             toolbar_location=None,
             tools=""
         )
@@ -342,7 +342,7 @@ def bar_chart_gender(data=pd.DataFrame()):
 
     else:
         fig = figure(
-            height=settings.COL2_HEIGHT,
+            height=settings.COL2_HEIGHT2,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
@@ -373,7 +373,7 @@ def bar_chart_level(data=pd.DataFrame()):
                                   .groupby([select_group.value]).mean().reset_index())
 
         fig = figure(
-            height=settings.COL2_HEIGHT,
+            height=settings.COL2_HEIGHT2,
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
@@ -393,7 +393,7 @@ def bar_chart_level(data=pd.DataFrame()):
             )
     else:
         fig = figure(
-            height=settings.COL2_HEIGHT,
+            height=settings.COL2_HEIGHT2,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
@@ -434,9 +434,9 @@ dashboard = layout(
             width=settings.COL1_WIDTH
         ),
         column(
-            row(line_chart(), height=settings.COL2_HEIGHT),
-            row(bar_chart_gender(), height=settings.COL2_HEIGHT),
-            row(bar_chart_level(), height=settings.COL2_HEIGHT),
+            row(line_chart(), height=settings.COL2_HEIGHT1),
+            row(bar_chart_gender(), height=settings.COL2_HEIGHT2),
+            row(bar_chart_level(), height=settings.COL2_HEIGHT2),
             width=settings.COL2_WIDTH
         )
     )
