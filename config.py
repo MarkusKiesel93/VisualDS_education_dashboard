@@ -58,7 +58,7 @@ class Config():
         },
     }
 
-    GROUP_BY = ['region', 'income_group']
+    GROUP_BY = ['income_group', 'region']
     INFO_ITEMS = ['country_name', 'population', 'education_expenditure_gdp_rate', 'number_teachers']
     LEVELS = ['total', 'primary', 'secondary', 'tertiary']
     GENDER = ['total', 'female', 'male']

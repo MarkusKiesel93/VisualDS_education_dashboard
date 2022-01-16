@@ -75,11 +75,10 @@ def create_slider_widget(title, options):
 
 def create_select_widget(title, options):
     value = options[0]
-    options = [(option, format_label(option)) for option in options]
     return Select(
         title=title,
         value=value,
-        options=options
+        options=format_options(options)
     )
 
 
@@ -99,6 +98,10 @@ def create_options(type, options):
         if value in restricted_options:
             restricted_options.remove(value)
     return restricted_options
+
+
+def format_options(options):
+    return [(option, format_label(option)) for option in options]
 
 
 def geo_index(selected_countries):
@@ -147,10 +150,10 @@ def update_view_tools(attr, old, new):
     else:
         checkbox_group.active.remove(0)
     level_options = create_options('level', settings.LEVELS)
-    select_level.options = level_options
+    select_level.options = format_options(level_options)
     select_level.value = level_options[0]
     gender_options = create_options('gender', settings.GENDER)
-    select_gender.options = gender_options
+    select_gender.options = format_options(gender_options)
     select_gender.value = gender_options[0]
     update_view(attr, old, new)
 
@@ -311,7 +314,7 @@ def line_chart(countries=[]):
 
 
 def bar_chart_gender(data=pd.DataFrame()):
-    dodge_values = [-0.25, 0.0, 0.25]
+    dodge_values = [0.0, -0.15, 0.15]
 
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
@@ -327,21 +330,20 @@ def bar_chart_gender(data=pd.DataFrame()):
         )
         fig.xaxis.major_label_orientation = 120
 
-        # todo: only use possible values
-        for gender, d in zip(settings.GENDER, dodge_values):
+        for i, (gender, label) in enumerate(select_gender.options):
             fig.vbar(
-                x=dodge(select_group.value, d, range=fig.x_range),
+                x=dodge(select_group.value, dodge_values[i], range=fig.x_range),
                 top=indicator_col(gender=gender),
                 source=source,
-                width=0.2,
+                width=0.15,
                 color=settings.GENDER_COLORS[gender],
-                legend_label=format_label(gender)
+                legend_label=label
             )
 
     else:
         fig = figure(
             x_range=data['country_name'],
-            y_range=(0, 700),
+            y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
             height=350,
             toolbar_location=None,
@@ -350,22 +352,21 @@ def bar_chart_gender(data=pd.DataFrame()):
         fig.xaxis.major_label_orientation = 120
 
         source = ColumnDataSource(data=data)
-        for gender, d in zip(settings.GENDER, dodge_values):
+        for i, (gender, label) in enumerate(select_gender.options):
             fig.vbar(
-                x=dodge('country_name', d, range=fig.x_range),
+                x=dodge('country_name', dodge_values[i], range=fig.x_range),
                 top=indicator_col(gender=gender),
                 source=source,
-                width=0.2,
+                width=0.15,
                 color=settings.GENDER_COLORS[gender],
-                legend_label=format_label(gender)
+                legend_label=label
             )
 
     return fig
 
 
-# todo change gender by selection
 def bar_chart_level(data=pd.DataFrame()):
-    dodge_values = [-0.2, -0.1, 0.1, 0.2]
+    dodge_values = [-0.225, -0.075, 0.075, 0.225]
 
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
@@ -381,20 +382,19 @@ def bar_chart_level(data=pd.DataFrame()):
         )
         fig.xaxis.major_label_orientation = 120
 
-        # todo: only use possible values
-        for level, d in zip(settings.LEVELS, dodge_values):
+        for i, (level, label) in enumerate(select_level.options):
             fig.vbar(
-                x=dodge(select_group.value, d, range=fig.x_range),
+                x=dodge(select_group.value, dodge_values[i], range=fig.x_range),
                 top=indicator_col(level=level),
                 source=source,
-                width=0.2,
+                width=0.15,
                 color=settings.LEVEL_COLORS[level],
-                legend_label=format_label(level)
+                legend_label=label
             )
     else:
         fig = figure(
             x_range=data['country_name'],
-            y_range=(0, 700),
+            y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
             height=350,
             toolbar_location=None,
@@ -404,15 +404,14 @@ def bar_chart_level(data=pd.DataFrame()):
 
         source = ColumnDataSource(data=data)
 
-        # todo: only use possible values
-        for level, d in zip(settings.LEVELS, dodge_values):
+        for i, (level, label) in enumerate(select_level.options):
             fig.vbar(
-                x=dodge('country_name', d, range=fig.x_range),
+                x=dodge('country_name', dodge_values[i], range=fig.x_range),
                 top=indicator_col(level=level),
                 source=source,
-                width=0.2,
+                width=0.15,
                 color=settings.LEVEL_COLORS[level],
-                legend_label=format_label(level)
+                legend_label=label
             )
 
     return fig
