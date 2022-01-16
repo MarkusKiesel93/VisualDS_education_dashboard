@@ -293,6 +293,8 @@ def line_chart(countries=[]):
 
 
 def bar_chart_gender(data=pd.DataFrame()):
+    dodge_values = [-0.25, 0.0, 0.25]
+    
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
                                   .groupby([select_group.value]).mean().reset_index())
@@ -306,8 +308,6 @@ def bar_chart_gender(data=pd.DataFrame()):
             tools=""
         )
         fig.xaxis.major_label_orientation = 120
-
-        dodge_values = [-0.25, 0.0, 0.25]
 
         # todo: only use possible values
         for gender, d in zip(settings.GENDER, dodge_values):
@@ -329,22 +329,26 @@ def bar_chart_gender(data=pd.DataFrame()):
             toolbar_location=None,
             tools=""
         )
+        fig.xaxis.major_label_orientation = 120
+
         source = ColumnDataSource(data=data)
-
-        fig.vbar(x=dodge('country_name', -0.25, range=fig.x_range), top='learning_outcome_total_female', source=source,
-                 width=0.2, color="#d332b0", legend_label="female")
-
-        fig.vbar(x=dodge('country_name',  0.0,  range=fig.x_range), top='learning_outcome_total_total', source=source,
-                 width=0.2, color="#3ca815", legend_label="total")
-
-        fig.vbar(x=dodge('country_name',  0.25, range=fig.x_range), top='learning_outcome_total_male', source=source,
-                 width=0.2, color="#3265d3", legend_label="male")
+        for gender, d in zip(settings.GENDER, dodge_values):
+            fig.vbar(
+                x=dodge('country_name', d, range=fig.x_range),
+                top=indicator_col(gender=gender),
+                source=source,
+                width=0.2,
+                color=settings.GENDER_COLORS[gender],
+                legend_label=format_label(gender)
+            )
 
     return fig
 
 
 # todo change gender by selection
 def bar_chart_level(data=pd.DataFrame()):
+    dodge_values = [-0.2, -0.1, 0.1, 0.2]
+
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
                                   .groupby([select_group.value]).mean().reset_index())
@@ -358,8 +362,6 @@ def bar_chart_level(data=pd.DataFrame()):
             tools=""
         )
         fig.xaxis.major_label_orientation = 120
-
-        dodge_values = [-0.2, -0.1, 0.1, 0.2]
 
         # todo: only use possible values
         for level, d in zip(settings.LEVELS, dodge_values):
@@ -380,19 +382,20 @@ def bar_chart_level(data=pd.DataFrame()):
             toolbar_location=None,
             tools=""
         )
+        fig.xaxis.major_label_orientation = 120
+
         source = ColumnDataSource(data=data)
 
-        fig.vbar(x=dodge('country_name', -0.25, range=fig.x_range), top='learning_outcome_total_total', source=source,
-                 width=0.2, color="#d332b0", legend_label="total")
-
-        fig.vbar(x=dodge('country_name',  -0.05,  range=fig.x_range), top='learning_outcome_primary_total', source=source,
-                 width=0.2, color="#3ca815", legend_label="primary")
-
-        fig.vbar(x=dodge('country_name',  0.05, range=fig.x_range), top='learning_outcome_secondary_total', source=source,
-                 width=0.2, color="#3265d3", legend_label="secondary")
-
-        fig.vbar(x=dodge('country_name',  0.25, range=fig.x_range), top='learning_outcome_tertiary_total', source=source,
-                 width=0.2, color="#3265d1", legend_label="tertiary")
+        # todo: only use possible values
+        for level, d in zip(settings.LEVELS, dodge_values):
+            fig.vbar(
+                x=dodge('country_name', d, range=fig.x_range),
+                top=indicator_col(level=level),
+                source=source,
+                width=0.2,
+                color=settings.LEVEL_COLORS[level],
+                legend_label=format_label(level)
+            )
 
     return fig
 
