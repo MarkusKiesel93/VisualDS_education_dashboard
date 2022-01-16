@@ -2,7 +2,7 @@ from bokeh.transform import factor_cmap
 from bokeh.models import Legend, LinearColorMapper, CategoricalColorMapper
 from bokeh.palettes import Category10, Greens9
 from bokeh.layouts import column, row, layout
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
+from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup, Selection
 from bokeh.plotting import figure, curdoc
 from bokeh.transform import dodge
 import pandas as pd
@@ -84,6 +84,14 @@ def create_options(type, options):
     return restricted_options
 
 
+def geo_index(selected_countries):
+    index = []
+    geo_country_codes = list(subset_geo.reset_index()['country_code'].values)
+    for country in selected_countries:
+        index.append(geo_country_codes.index(country))
+    return index
+
+
 def update_view(attr, old, new):
     dashboard.children[0].children[1] = scatter()
     dashboard.children[0].children[2] = line_chart()
@@ -94,9 +102,15 @@ def update_view(attr, old, new):
 
 def test(attr, old, new):
     data = source.to_df().iloc[new]
-    dashboard.children[0].children[2] = line_chart(data['country_code'].values)
+    selected_countries = data['country_code'].values
+    dashboard.children[0].children[2] = line_chart(selected_countries)
     dashboard.children[1].children[1] = bar_chart_gender(data)
     dashboard.children[1].children[2] = bar_chart_level(data)
+    geo_source.selected.indices = geo_index(selected_countries)
+
+
+def test2(attr, old, new):
+    print(new)
 
 
 def update_data(attr, old, new):
@@ -152,6 +166,7 @@ select_level.on_change('value', update_data)
 select_gender.on_change('value', update_data)
 checkbox_group.on_change('active', update_view)
 source.selected.on_change('indices', test)
+geo_source.selected.on_change('indices', test2)
 
 # scatterplot function
 def scatter():
