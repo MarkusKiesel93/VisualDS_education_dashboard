@@ -1,8 +1,8 @@
 from bokeh.transform import factor_cmap
 from bokeh.models import Legend, LinearColorMapper, CategoricalColorMapper
-from bokeh.palettes import Category10, Greens9
+from bokeh.palettes import Category10, Greens9, Category20
 from bokeh.layouts import column, row, layout
-from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup, Selection
+from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
 from bokeh.plotting import figure, curdoc
 from bokeh.transform import dodge
 import pandas as pd
@@ -88,7 +88,8 @@ def geo_index(selected_countries):
     index = []
     geo_country_codes = list(subset_geo.reset_index()['country_code'].values)
     for country in selected_countries:
-        index.append(geo_country_codes.index(country))
+        if country in geo_country_codes:
+            index.append(geo_country_codes.index(country))
     return index
 
 
@@ -251,7 +252,6 @@ def choropleth():
     return fig
 
 
-# todo: create line_chart for goups by default and if selected create for each country
 def line_chart(countries=[]):
     fig = figure(
         plot_height=300,
@@ -274,6 +274,14 @@ def line_chart(countries=[]):
     def get_color(group):
         return color_mapper.palette[color_mapper.factors.index(group)]
 
+    def get_color2(n, i):
+        if n < 10:
+            colors = Category10[10]
+            return colors[i % 10]
+        else:
+            colors = Category20[20]
+            return colors[i % 20]
+
     if len(countries) < 1:
         data = df.groupby([select_group.value, 'year']).mean().reset_index()
         for group in settings.GROUPS[select_group.value]:
@@ -286,8 +294,16 @@ def line_chart(countries=[]):
             )
 
     else:
-        for country in countries:
-            fig.line('year', 'learning_outcome_total_total', source=ColumnDataSource(df.xs(country, level='country_code')))
+        n = len(countries)
+        for i, country in enumerate(countries):
+            fig.line(
+                'year',
+                indicator_col(),
+                source=ColumnDataSource(df.xs(country, level='country_code')),
+                color=get_color2(n, i),
+                legend_group='country_name',
+            )
+        fig.legend.title = format_label('country_name')
 
     return fig
 
