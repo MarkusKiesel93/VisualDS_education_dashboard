@@ -109,6 +109,7 @@ def test(attr, old, new):
     geo_source.selected.indices = geo_index(selected_countries)
 
 
+# todo callbach for clicking map
 def test2(attr, old, new):
     print(new)
 
@@ -137,7 +138,6 @@ def update_view_tools(attr, old, new):
 
 
 def create_tooltips(values):
-    # todo: maybe use info items here as well
     tooltips = [(format_label(value), '@' + indicator_col(value)) for value in values]
     tooltips.insert(0, ('Country', '@country_name'))
     return tooltips
@@ -152,7 +152,7 @@ geo_source = GeoJSONDataSource(geojson=subset_geo.to_json())
 slider_year = create_slider_widget('Year', settings.DATES)
 select_indicator = create_select_widget('Indicator:', list(settings.INDICATORS.keys()))
 select_by = create_select_widget('By:', list(settings.BY.keys()))
-select_color = create_select_widget('Color by:', settings.COLOR_BY)  # todo rename to grouping
+select_group = create_select_widget('Group by:', settings.GROUP_BY)
 select_level = create_select_widget('Education Level:', create_options('level', settings.LEVELS))
 select_gender = create_select_widget('Gender:', create_options('gender', settings.GENDER))
 checkbox_group = create_checkbox_widget(['Log scale'], [0])
@@ -161,7 +161,7 @@ checkbox_group = create_checkbox_widget(['Log scale'], [0])
 slider_year.on_change('value', update_data)
 select_indicator.on_change('value', update_view_tools)
 select_by.on_change('value', update_view_tools)
-select_color.on_change('value', update_view)
+select_group.on_change('value', update_view)
 select_level.on_change('value', update_data)
 select_gender.on_change('value', update_data)
 checkbox_group.on_change('active', update_view)
@@ -181,7 +181,7 @@ def scatter():
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.xaxis.axis_label = format_label(select_by.value, x_label=True)
     fig.add_layout(Legend(), 'right')
-    fig.legend.title = format_label(select_color.value)
+    fig.legend.title = format_label(select_group.value)
 
     # set tooltips
     fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
@@ -192,12 +192,12 @@ def scatter():
         y=indicator_col(select_indicator.value),
         source=source,
         color=factor_cmap(
-            field_name=select_color.value,
-            palette=Category10[len(settings.GROUPS[select_color.value])],
-            factors=settings.GROUPS[select_color.value]),
+            field_name=select_group.value,
+            palette=Category10[len(settings.GROUPS[select_group.value])],
+            factors=settings.GROUPS[select_group.value]),
         size=9,
         hover_line_color='black',
-        legend_group=select_color.value,
+        legend_group=select_group.value,
         fill_alpha=0.5)
 
     return fig
@@ -263,26 +263,26 @@ def line_chart(countries=[]):
     fig.xaxis.axis_label = 'Year'
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.add_layout(Legend(), 'right')
-    fig.legend.title = format_label(select_color.value)
+    fig.legend.title = format_label(select_group.value)
 
     # todo: move to somewhere general
     color_mapper = CategoricalColorMapper(
-        palette=Category10[len(settings.GROUPS[select_color.value])],
-        factors=settings.GROUPS[select_color.value]
+        palette=Category10[len(settings.GROUPS[select_group.value])],
+        factors=settings.GROUPS[select_group.value]
     )
 
     def get_color(group):
         return color_mapper.palette[color_mapper.factors.index(group)]
 
     if len(countries) < 1:
-        data = df.groupby([select_color.value, 'year']).mean().reset_index()
-        for group in settings.GROUPS[select_color.value]:
+        data = df.groupby([select_group.value, 'year']).mean().reset_index()
+        for group in settings.GROUPS[select_group.value]:
             fig.line(
                 'year',
                 indicator_col(),
-                source=ColumnDataSource(data[data[select_color.value] == group]),
+                source=ColumnDataSource(data[data[select_group.value] == group]),
                 color=get_color(group),
-                legend_group=select_color.value,
+                legend_group=select_group.value,
             )
 
     else:
@@ -295,10 +295,10 @@ def line_chart(countries=[]):
 def bar_chart_gender(data=pd.DataFrame()):
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
-                                  .groupby([select_color.value]).mean().reset_index())
+                                  .groupby([select_group.value]).mean().reset_index())
 
         fig = figure(
-            x_range=source.data[select_color.value],
+            x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
             height=350,
@@ -316,7 +316,7 @@ def bar_chart_gender(data=pd.DataFrame()):
         # todo: only use possible values
         for gender, d in zip(settings.GENDER, dodge_values):
             fig.vbar(
-                x=dodge(select_color.value, d, range=fig.x_range),
+                x=dodge(select_group.value, d, range=fig.x_range),
                 top=indicator_col(gender=gender),
                 source=source,
                 width=0.2,
@@ -351,10 +351,10 @@ def bar_chart_gender(data=pd.DataFrame()):
 def bar_chart_level(data=pd.DataFrame()):
     if data.shape[0] < 1:
         source = ColumnDataSource(df.xs(slider_year.value, level='year')
-                                  .groupby([select_color.value]).mean().reset_index())
+                                  .groupby([select_group.value]).mean().reset_index())
 
         fig = figure(
-            x_range=source.data[select_color.value],
+            x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
             height=350,
@@ -373,7 +373,7 @@ def bar_chart_level(data=pd.DataFrame()):
         # todo: only use possible values
         for level, d in zip(settings.LEVELS, dodge_values):
             fig.vbar(
-                x=dodge(select_color.value, d, range=fig.x_range),
+                x=dodge(select_group.value, d, range=fig.x_range),
                 top=indicator_col(level=level),
                 source=source,
                 width=0.2,
@@ -407,7 +407,7 @@ def bar_chart_level(data=pd.DataFrame()):
 
 
 # add tools and different plots to oune dashboard
-tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_color, checkbox_group)
+tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_group, checkbox_group)
 dashboard = layout(
     row(tools, scatter(), line_chart()),
     row(choropleth(), bar_chart_gender(), bar_chart_level()),
