@@ -1,5 +1,3 @@
-
-
 class Config():
     def __init__(self, df):
         self.DATES = sorted(df.index.get_level_values('year').unique())
@@ -7,6 +5,17 @@ class Config():
             'region': sorted(df['region'].unique()),
             'income_group': sorted(df['income_group'].unique())
         }
+        self.COL1_WIDTH = self.get_size(self.WIDTH, 2, 3)
+        self.COL2_WIDTH = self.get_size(self.WIDTH, 1, 3)
+        self.COL1_HEIGHT = self.get_size(self.HEIGHT, 1, 2)
+        self.COL2_HEIGHT = self.get_size(self.HEIGHT, 1, 3)
+        self.TOOL_WIDTH = self.get_size(self.COL1_WIDTH, 2, 7)
+
+    def get_size(self, size, numerator, denominator):
+        return int(size * numerator / denominator)
+
+    HEIGHT = 1000
+    WIDTH = 1800
 
     INDICATORS = {
         'learning_outcome': {

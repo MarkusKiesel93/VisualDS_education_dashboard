@@ -193,8 +193,8 @@ geo_source.selected.on_change('indices', test2)
 # scatterplot function
 def scatter():
     fig = figure(
-        height=400,
-        width=800,
+        height=settings.COL1_HEIGHT,
+        width=settings.COL1_WIDTH,
         tools='hover,tap,pan,box_zoom,wheel_zoom,zoom_in,zoom_out,lasso_select,save,reset',
         toolbar_location='above',
         x_axis_type='log' if 0 in checkbox_group.active else 'linear',
@@ -228,8 +228,8 @@ def scatter():
 # chropleth function
 def choropleth():
     fig = figure(
-        plot_height=500,
-        plot_width=900,
+        height=settings.COL1_HEIGHT,
+        width=settings.COL1_WIDTH - settings.TOOL_WIDTH,
         tools='hover,tap,wheel_zoom,zoom_in,zoom_out,save,reset',
         toolbar_location='above',
         x_axis_location=None,
@@ -276,8 +276,8 @@ def choropleth():
 
 def line_chart(countries=[]):
     fig = figure(
-        plot_height=300,
-        plot_width=700,
+        height=settings.COL2_HEIGHT,
+        width=settings.COL2_WIDTH,
         x_range=(settings.DATES[0], settings.DATES[-1]),
         y_range=select_range(settings.INDICATORS, select_indicator.value),
         title='Development by Year'
@@ -324,7 +324,7 @@ def bar_chart_gender(data=pd.DataFrame()):
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
-            height=350,
+            height=settings.COL2_HEIGHT,
             toolbar_location=None,
             tools=""
         )
@@ -342,10 +342,10 @@ def bar_chart_gender(data=pd.DataFrame()):
 
     else:
         fig = figure(
+            height=settings.COL2_HEIGHT,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
-            height=350,
             toolbar_location=None,
             tools=""
         )
@@ -373,10 +373,10 @@ def bar_chart_level(data=pd.DataFrame()):
                                   .groupby([select_group.value]).mean().reset_index())
 
         fig = figure(
+            height=settings.COL2_HEIGHT,
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
-            height=350,
             toolbar_location=None,
             tools=""
         )
@@ -393,10 +393,10 @@ def bar_chart_level(data=pd.DataFrame()):
             )
     else:
         fig = figure(
+            height=settings.COL2_HEIGHT,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             title='todo',
-            height=350,
             toolbar_location=None,
             tools=""
         )
@@ -420,8 +420,26 @@ def bar_chart_level(data=pd.DataFrame()):
 # add tools and different plots to oune dashboard
 tools = column(slider_year, select_indicator, select_by, select_level, select_gender, select_group, checkbox_group)
 dashboard = layout(
-    row(tools, scatter(), line_chart()),
-    row(choropleth(), bar_chart_gender(), bar_chart_level()),
+    row(
+        column(
+            row(
+                column(
+                    tools,
+                    width=settings.TOOL_WIDTH
+                ),
+                choropleth(),
+                height=settings.COL1_HEIGHT
+            ),
+            row(scatter(), height=settings.COL1_HEIGHT),
+            width=settings.COL1_WIDTH
+        ),
+        column(
+            row(line_chart(), height=settings.COL2_HEIGHT),
+            row(bar_chart_gender(), height=settings.COL2_HEIGHT),
+            row(bar_chart_level(), height=settings.COL2_HEIGHT),
+            width=settings.COL2_WIDTH
+        )
+    )
 )
 
 curdoc().add_root(dashboard)
