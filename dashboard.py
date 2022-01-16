@@ -19,11 +19,12 @@ settings = Config(df)
 def indicator_col(indicator=None, level=None, gender=None):
     if not indicator:
         indicator = select_indicator.value
-    if level and gender:
-        levels = [indicator, level, gender]
-    else:
-        levels = [indicator, select_level.value, select_gender.value]
-    return '_'.join(levels)
+    if not level:
+        level = select_level.value
+    if not gender:
+        gender = select_gender.value
+    return '_'.join([indicator, level, gender])
+
 
 # define helper functions:
 def select_range(config, indicator, level=None, gender=None):
@@ -85,8 +86,10 @@ def create_options(type, options):
 
 def update_view(attr, old, new):
     dashboard.children[0].children[1] = scatter()
-    dashboard.children[1].children[0] = choropleth()
     dashboard.children[0].children[2] = line_chart()
+    dashboard.children[1].children[0] = choropleth()
+    dashboard.children[1].children[1] = bar_chart_gender()
+    dashboard.children[1].children[2] = bar_chart_level()
 
 
 def test(attr, old, new):
@@ -276,7 +279,36 @@ def line_chart(countries=[]):
 
 def bar_chart_gender(data=pd.DataFrame()):
     if data.shape[0] < 1:
-        fig = figure()  # todo default groupby plot
+        source = ColumnDataSource(df.xs(slider_year.value, level='year')
+                                  .groupby([select_color.value]).mean().reset_index())
+
+        fig = figure(
+            x_range=source.data[select_color.value],
+            y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
+            title='todo',
+            height=350,
+            toolbar_location=None,
+            tools=""
+        )
+        fig.xaxis.major_label_orientation = 120
+
+        dodge_values = [-0.25, 0.0, 0.25]
+        colors = {
+            'female': '#e377c2',
+            'total': '#ff7f0e',
+            'male': '#1f77b4'
+        }
+        # todo: only use possible values
+        for gender, d in zip(settings.GENDER, dodge_values):
+            fig.vbar(
+                x=dodge(select_color.value, d, range=fig.x_range),
+                top=indicator_col(gender=gender),
+                source=source,
+                width=0.2,
+                color=colors[gender],
+                legend_label=format_label(gender)
+            )
+
     else:
         fig = figure(
             x_range=data['country_name'],
@@ -303,7 +335,36 @@ def bar_chart_gender(data=pd.DataFrame()):
 # todo change gender by selection
 def bar_chart_level(data=pd.DataFrame()):
     if data.shape[0] < 1:
-        fig = figure()  # todo default groupby plot
+        source = ColumnDataSource(df.xs(slider_year.value, level='year')
+                                  .groupby([select_color.value]).mean().reset_index())
+
+        fig = figure(
+            x_range=source.data[select_color.value],
+            y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
+            title='todo',
+            height=350,
+            toolbar_location=None,
+            tools=""
+        )
+        fig.xaxis.major_label_orientation = 120
+
+        dodge_values = [-0.2, -0.1, 0.1, 0.2]
+        colors = {
+            'total': '#ff7f0e',
+            'primary': '#1f77b4',
+            'secondary': '#9467bd',
+            'tertiary': '#d62728'
+        }
+        # todo: only use possible values
+        for level, d in zip(settings.LEVELS, dodge_values):
+            fig.vbar(
+                x=dodge(select_color.value, d, range=fig.x_range),
+                top=indicator_col(level=level),
+                source=source,
+                width=0.2,
+                color=colors[level],
+                legend_label=format_label(level)
+            )
     else:
         fig = figure(
             x_range=data['country_name'],
