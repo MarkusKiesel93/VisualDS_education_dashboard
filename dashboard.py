@@ -1,6 +1,6 @@
 from bokeh.transform import factor_cmap
 from bokeh.models import Legend, LinearColorMapper, CategoricalColorMapper
-from bokeh.palettes import Category10, Greens9, Category20
+from bokeh.palettes import Category10, Category20, Blues9
 from bokeh.layouts import column, row, layout
 from bokeh.models import ColumnDataSource, GeoJSONDataSource, Slider, Select, ColorBar, CheckboxGroup
 from bokeh.plotting import figure, curdoc
@@ -242,16 +242,17 @@ def choropleth():
     fig.title.align = 'center'
     fig.title.text_font_size = '20px'
 
+    low, high = select_range(settings.INDICATORS, select_indicator.value)
     color_mapper = LinearColorMapper(
-        palette=list(reversed(Greens9)),
-        low=0,
-        high=100)
+        palette=list(reversed(Blues9)),
+        low=low,
+        high=high)
 
     fig.patches(
         xs='xs',
         ys='ys',
         source=geo_source,
-        fill_alpha=0.7,
+        fill_alpha=0.9,
         fill_color={'field': indicator_col(select_indicator.value), 'transform': color_mapper},
         line_color='white',
         line_width=0.3,
@@ -266,6 +267,7 @@ def choropleth():
         location='bottom_left', orientation='horizontal',
         title=format_label(select_indicator.value),
         title_text_font_size='14px', title_text_font_style='bold',
+        scale_alpha=0.9,
         background_fill_alpha=0.0)
     fig.add_layout(color_bar)
 
@@ -335,6 +337,7 @@ def bar_chart_gender(data=pd.DataFrame()):
                 source=source,
                 width=0.15,
                 color=settings.GENDER_COLORS[gender],
+                alpha=0.7,
                 legend_label=label
             )
 
@@ -355,6 +358,7 @@ def bar_chart_gender(data=pd.DataFrame()):
                 source=source,
                 width=0.15,
                 color=settings.GENDER_COLORS[gender],
+                alpha=0.7,
                 legend_label=label
             )
     fig.xaxis.major_label_orientation = 120
@@ -388,6 +392,7 @@ def bar_chart_level(data=pd.DataFrame()):
                 source=source,
                 width=0.15,
                 color=settings.LEVEL_COLORS[level],
+                alpha=0.7,
                 legend_label=label
             )
     else:
@@ -408,11 +413,12 @@ def bar_chart_level(data=pd.DataFrame()):
                 source=source,
                 width=0.15,
                 color=settings.LEVEL_COLORS[level],
+                alpha=0.7,
                 legend_label=label
             )
     fig.xaxis.major_label_orientation = 120
     fig.yaxis.axis_label = format_label(select_indicator.value)
-    fig.title.text = 'Difference by Gender'
+    fig.title.text = 'Difference by Education Level'
     fig.title.align = 'center'
     fig.title.text_font_size = '20px'
 

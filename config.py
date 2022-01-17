@@ -77,7 +77,7 @@ class Config():
     }
     LEVEL_COLORS = {
         'total': '#ff7f0e',
-        'primary': '#1f77b4',
+        'primary': '#2ca02c',
         'secondary': '#9467bd',
-        'tertiary': '#d62728'
+        'tertiary': '#8c564b'
     }
