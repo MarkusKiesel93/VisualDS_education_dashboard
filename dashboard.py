@@ -121,7 +121,7 @@ def update_view(attr, old, new):
     dashboard.children[0].children[1].children[2] = bar_chart_level()
 
 
-def test(attr, old, new):
+def update_by_select(attr, old, new):
     data = source.to_df().iloc[new]
     selected_countries = data['country_code'].values
     dashboard.children[0].children[1].children[0] = line_chart(selected_countries)
@@ -186,7 +186,7 @@ select_group.on_change('value', update_view)
 select_level.on_change('value', update_data)
 select_gender.on_change('value', update_data)
 checkbox_group.on_change('active', update_view)
-source.selected.on_change('indices', test)
+source.selected.on_change('indices', update_by_select)
 geo_source.selected.on_change('indices', test2)
 
 
@@ -248,8 +248,8 @@ def choropleth():
         high=100)
 
     fig.patches(
-        xs="xs",
-        ys="ys",
+        xs='xs',
+        ys='ys',
         source=geo_source,
         fill_alpha=0.7,
         fill_color={'field': indicator_col(select_indicator.value), 'transform': color_mapper},
@@ -263,9 +263,9 @@ def choropleth():
 
     color_bar = ColorBar(
         color_mapper=color_mapper,
-        location="bottom_left", orientation="horizontal",
+        location='bottom_left', orientation='horizontal',
         title=format_label(select_indicator.value),
-        title_text_font_size="14px", title_text_font_style="bold",
+        title_text_font_size='14px', title_text_font_style='bold',
         background_fill_alpha=0.0)
     fig.add_layout(color_bar)
 
@@ -323,10 +323,9 @@ def bar_chart_gender(data=pd.DataFrame()):
         fig = figure(
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
-            title='todo',
             height=settings.COL2_HEIGHT2,
             toolbar_location=None,
-            tools=""
+            tools=''
         )
 
         for i, (gender, label) in enumerate(select_gender.options):
@@ -344,9 +343,8 @@ def bar_chart_gender(data=pd.DataFrame()):
             height=settings.COL2_HEIGHT2,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
-            title='todo',
             toolbar_location=None,
-            tools=""
+            tools=''
         )
 
         source = ColumnDataSource(data=data)
@@ -379,9 +377,8 @@ def bar_chart_level(data=pd.DataFrame()):
             height=settings.COL2_HEIGHT2,
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
-            title='todo',
             toolbar_location=None,
-            tools=""
+            tools=''
         )
 
         for i, (level, label) in enumerate(select_level.options):
@@ -398,9 +395,8 @@ def bar_chart_level(data=pd.DataFrame()):
             height=settings.COL2_HEIGHT2,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
-            title='todo',
             toolbar_location=None,
-            tools=""
+            tools=''
         )
 
         source = ColumnDataSource(data=data)
@@ -450,5 +446,3 @@ dashboard = layout(
 
 curdoc().add_root(dashboard)
 curdoc().title = 'World Education Dashboard'
-
-# todo: title by section
