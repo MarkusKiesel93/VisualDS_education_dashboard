@@ -285,7 +285,7 @@ def line_chart(countries=[]):
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.add_layout(Legend(), 'right')
     fig.legend.title = format_label(select_group.value)
-    fig.title.text = 'Development by Year'
+    fig.title.text = 'Development over Years'
     fig.title.align = 'center'
     fig.title.text_font_size = '20px'
 
@@ -452,3 +452,6 @@ dashboard = layout(
 
 curdoc().add_root(dashboard)
 curdoc().title = 'World Education Dashboard'
+
+# todo: selction for county
+# todo: legend outside for bar charts
