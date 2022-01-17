@@ -124,9 +124,9 @@ def update_view(attr, old, new):
 def test(attr, old, new):
     data = source.to_df().iloc[new]
     selected_countries = data['country_code'].values
-    dashboard.children[0].children[1].children[0] = line_chart()
-    dashboard.children[0].children[1].children[1] = bar_chart_gender()
-    dashboard.children[0].children[1].children[2] = bar_chart_level()
+    dashboard.children[0].children[1].children[0] = line_chart(selected_countries)
+    dashboard.children[0].children[1].children[1] = bar_chart_gender(data)
+    dashboard.children[0].children[1].children[2] = bar_chart_level(data)
     geo_source.selected.indices = geo_index(selected_countries)
 
 
@@ -204,6 +204,9 @@ def scatter():
     fig.xaxis.axis_label = format_label(select_by.value, x_label=True)
     fig.add_layout(Legend(), 'right')
     fig.legend.title = format_label(select_group.value)
+    fig.title.text = 'Data Explorer'
+    fig.title.align = 'center'
+    fig.title.text_font_size = '20px'
 
     # set tooltips
     fig.hover.tooltips = create_tooltips([select_indicator.value, select_by.value])
@@ -235,19 +238,14 @@ def choropleth():
         x_axis_location=None,
         y_axis_location=None)
     fig.grid.visible = False
+    fig.title.text = 'Difference by Country'
+    fig.title.align = 'center'
+    fig.title.text_font_size = '20px'
 
     color_mapper = LinearColorMapper(
         palette=list(reversed(Greens9)),
         low=0,
         high=100)
-
-    # patches = Patches(
-    #     xs="xs", ys="ys",
-    #     fill_alpha=0.7,
-    #     fill_color={'field': 'literacy_rate', 'transform': color_mapper},
-    #     line_color='white',
-    #     line_width=0.3)
-    # fig.add_glyph(geo_source, patches)
 
     fig.patches(
         xs="xs",
@@ -279,13 +277,15 @@ def line_chart(countries=[]):
         height=settings.COL2_HEIGHT1,
         width=settings.COL2_WIDTH,
         x_range=(settings.DATES[0], settings.DATES[-1]),
-        y_range=select_range(settings.INDICATORS, select_indicator.value),
-        title='Development by Year'
+        y_range=select_range(settings.INDICATORS, select_indicator.value)
     )
     fig.xaxis.axis_label = 'Year'
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.add_layout(Legend(), 'right')
     fig.legend.title = format_label(select_group.value)
+    fig.title.text = 'Development by Year'
+    fig.title.align = 'center'
+    fig.title.text_font_size = '20px'
 
     if len(countries) < 1:
         data = df.groupby([select_group.value, 'year']).mean().reset_index()
@@ -328,7 +328,6 @@ def bar_chart_gender(data=pd.DataFrame()):
             toolbar_location=None,
             tools=""
         )
-        fig.xaxis.major_label_orientation = 120
 
         for i, (gender, label) in enumerate(select_gender.options):
             fig.vbar(
@@ -349,7 +348,6 @@ def bar_chart_gender(data=pd.DataFrame()):
             toolbar_location=None,
             tools=""
         )
-        fig.xaxis.major_label_orientation = 120
 
         source = ColumnDataSource(data=data)
         for i, (gender, label) in enumerate(select_gender.options):
@@ -361,6 +359,11 @@ def bar_chart_gender(data=pd.DataFrame()):
                 color=settings.GENDER_COLORS[gender],
                 legend_label=label
             )
+    fig.xaxis.major_label_orientation = 120
+    fig.yaxis.axis_label = format_label(select_indicator.value)
+    fig.title.text = 'Difference by Gender'
+    fig.title.align = 'center'
+    fig.title.text_font_size = '20px'
 
     return fig
 
@@ -380,7 +383,6 @@ def bar_chart_level(data=pd.DataFrame()):
             toolbar_location=None,
             tools=""
         )
-        fig.xaxis.major_label_orientation = 120
 
         for i, (level, label) in enumerate(select_level.options):
             fig.vbar(
@@ -400,7 +402,6 @@ def bar_chart_level(data=pd.DataFrame()):
             toolbar_location=None,
             tools=""
         )
-        fig.xaxis.major_label_orientation = 120
 
         source = ColumnDataSource(data=data)
 
@@ -413,6 +414,11 @@ def bar_chart_level(data=pd.DataFrame()):
                 color=settings.LEVEL_COLORS[level],
                 legend_label=label
             )
+    fig.xaxis.major_label_orientation = 120
+    fig.yaxis.axis_label = format_label(select_indicator.value)
+    fig.title.text = 'Difference by Gender'
+    fig.title.align = 'center'
+    fig.title.text_font_size = '20px'
 
     return fig
 
@@ -446,4 +452,3 @@ curdoc().add_root(dashboard)
 curdoc().title = 'World Education Dashboard'
 
 # todo: title by section
-# todo: resize sections and give fixed size
