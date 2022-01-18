@@ -130,11 +130,6 @@ def update_by_select(attr, old, new):
     geo_source.selected.indices = geo_index(selected_countries)
 
 
-# todo: selction for county
-def test2(attr, old, new):
-    print(new)
-
-
 def update_data(attr, old, new):
     subset = df.xs(slider_year.value, level='year')
     subset_geo = df_geo.join(subset, on='country_code')
@@ -187,7 +182,6 @@ select_level.on_change('value', update_data)
 select_gender.on_change('value', update_data)
 checkbox_group.on_change('active', update_view)
 source.selected.on_change('indices', update_by_select)
-geo_source.selected.on_change('indices', test2)
 
 
 # scatterplot function

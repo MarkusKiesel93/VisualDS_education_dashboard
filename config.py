@@ -23,7 +23,7 @@ class Config():
         },
         'completion_rate': {
             'range': 'rate',
-            'level_not_present': [],
+            'level_not_present': ['total'],
             'gender_not_present': [],
         },
         'literacy_rate': {
