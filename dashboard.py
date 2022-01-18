@@ -130,7 +130,7 @@ def update_by_select(attr, old, new):
     geo_source.selected.indices = geo_index(selected_countries)
 
 
-# todo callbach for clicking map
+# todo: selction for county
 def test2(attr, old, new):
     print(new)
 
@@ -233,7 +233,7 @@ def choropleth():
     fig = figure(
         height=settings.COL1_HEIGHT,
         width=settings.COL1_WIDTH - settings.TOOL_WIDTH,
-        tools='hover,tap,wheel_zoom,zoom_in,zoom_out,save,reset',
+        tools='hover,tap,wheel_zoom,box_zoom,zoom_in,zoom_out,save,reset',
         toolbar_location='above',
         x_axis_location=None,
         y_axis_location=None)
@@ -323,9 +323,10 @@ def bar_chart_gender(data=pd.DataFrame()):
                                   .groupby([select_group.value]).mean().reset_index())
 
         fig = figure(
+            height=settings.COL2_HEIGHT2,
+            width=settings.COL2_WIDTH,
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
-            height=settings.COL2_HEIGHT2,
             toolbar_location=None,
             tools=''
         )
@@ -344,6 +345,7 @@ def bar_chart_gender(data=pd.DataFrame()):
     else:
         fig = figure(
             height=settings.COL2_HEIGHT2,
+            width=settings.COL2_WIDTH,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             toolbar_location=None,
@@ -361,6 +363,8 @@ def bar_chart_gender(data=pd.DataFrame()):
                 alpha=0.7,
                 legend_label=label
             )
+    fig.add_layout(Legend(items=fig.legend.items), 'right')
+    fig.legend[1].visible = False
     fig.xaxis.major_label_orientation = 120
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.title.text = 'Difference by Gender'
@@ -379,6 +383,7 @@ def bar_chart_level(data=pd.DataFrame()):
 
         fig = figure(
             height=settings.COL2_HEIGHT2,
+            width=settings.COL2_WIDTH,
             x_range=source.data[select_group.value],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             toolbar_location=None,
@@ -398,6 +403,7 @@ def bar_chart_level(data=pd.DataFrame()):
     else:
         fig = figure(
             height=settings.COL2_HEIGHT2,
+            width=settings.COL2_WIDTH,
             x_range=data['country_name'],
             y_range=(0, select_range(settings.INDICATORS, select_indicator.value)[1]),
             toolbar_location=None,
@@ -416,6 +422,8 @@ def bar_chart_level(data=pd.DataFrame()):
                 alpha=0.7,
                 legend_label=label
             )
+    fig.add_layout(Legend(items=fig.legend.items), 'right')
+    fig.legend[1].visible = False
     fig.xaxis.major_label_orientation = 120
     fig.yaxis.axis_label = format_label(select_indicator.value)
     fig.title.text = 'Difference by Education Level'
@@ -452,6 +460,3 @@ dashboard = layout(
 
 curdoc().add_root(dashboard)
 curdoc().title = 'World Education Dashboard'
-
-# todo: selction for county
-# todo: legend outside for bar charts
