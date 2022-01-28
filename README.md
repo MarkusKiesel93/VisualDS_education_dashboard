@@ -3,22 +3,22 @@
 ## Topic:
 ### How has the level of education changed in different countries?
 
-## Datasets.
-World Bank: https://data.worldbank.org/topic/education
-https://datacatalog.worldbank.org/search/dataset/0038001/Harmonized-Learning-Outcomes--HLO--Database
+## Datasets:
 
-https://www.rug.nl/ggdc/historicaldevelopment/maddison/releases/maddison-project-database-2020
+**World Bank Education:** https://data.worldbank.org/topic/education
 
-convert to pdf:
-jupyter nbconvert --to pdf --no-input *.ipynb
+**World Bank Learning Outcome:** https://datacatalog.worldbank.org/search/dataset/0038001/Harmonized-Learning-Outcomes--HLO--Database
 
-teachers_primary_total - teachers_primary_female
-1 - education_pupils_primary_female
-1 - education_pupils_secondary_female
+**Maddison Project:** https://www.rug.nl/ggdc/historicaldevelopment/maddison/releases/maddison-project-database-2020
 
-# run boke server
-bokeh serve --show myapp.py
+**Natural Earth:** https://www.naturalearthdata.com/downloads/
 
-ToDos:
-* make year selection a range or a point
-* callbacks for tab and hover
+## Requirements
+Requirements can be installed from requirements.txt or from the Pipfile (for pipenv)
+
+## Run Boke Server (Dashboard)
+bokeh serve --show dashboard.py
+
+
+## Modelling Part
+The R code for the modelling part can be found in the model.Rmd
