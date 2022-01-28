@@ -19,6 +19,9 @@ Requirements can be installed from requirements.txt or from the Pipfile (for pip
 ## Run Boke Server (Dashboard)
 bokeh serve --show dashboard.py
 
-
 ## Modelling Part
 The R code for the modelling part can be found in the model.Rmd
+
+## The Dashboard
+
+![Alt text](dashboard.png?raw=true "World Education Dashboard")
