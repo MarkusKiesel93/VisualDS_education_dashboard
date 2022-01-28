@@ -1,0 +1,210 @@
+---
+title: "Visual Data Science"
+subtitle: "Model Education Data"
+author: "Markus Kiesel | 1228952"
+date: "18.01.2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(ech =TRUE)
+library(glmnet)
+library(caret)
+library(Metrics)
+library(ggplot2)
+```
+
+# Introduction
+
+The education dataset used for this project is highly fragmented. For most indicators we have data by education level and gender which makes the features highly correlated as well. Further, many values are forward filled which has the effect that values over years are very similar.
+For these reasons we decided to only use the total values and only evaluate which features give us the most information. This is done by scaling and centering all features expect the target value and using logistic regression to shrink uninformative or highly correlated features to zero.
+The indicators we are interested in are the learning outcome, completion rate and the literacy rate.
+
+First we load the data for all total indicators and preprocess it.
+
+```{r}
+# load data
+df <- read.csv("./data/data_total.csv")
+# drop country code and name and region
+df <- subset(df, select=-c(country_code, country_name, region))
+# income group to factors
+df <- transform(df, income_group = as.factor(income_group))
+# drop rows wit null values
+df <- na.omit(df)
+# one-hot encode income group
+dummy <- dummyVars(" ~ .", data = df)
+df <- data.frame(predict(dummy, newdata = df))
+# have a look at structure
+str(df)
+# summary
+summary(df)
+```
+
+We need to scale and center the data to be able to compare the different coefficients afterwards.
+
+```{r}
+# function to scale and center all non character columns
+scale_numbers <- function(data, from_train=TRUE, means=c(), sds=c()) {
+  num_cols <- dim(data)[2]
+  if (from_train) {
+    means <- rep(0, num_cols)
+    sds <- rep(0, num_cols)
+  }
+  for (col in 1:num_cols) {
+    if (class(data[, col]) != "character") {
+      if (from_train) {
+        means[col] <- mean(data[, col])
+        sds[col] <- sd(data[, col])
+      }
+      data[, col] <- (data[, col] - means[col]) / sds[col]
+    }
+  }
+  return(list(data=data, means=means, sds=sds))
+}
+```
+
+To be able to evaluate our models we split the data into training and testing sets.
+
+```{r}
+# Train-Test Split
+set.seed(1228052)
+n <- nrow(df)
+train_index <- sample(1:n, n * 0.8)
+test_index <- c(1:n)[-train_index]
+```
+
+# Model Learning Outcome
+
+```{r}
+# select indicator of interest
+x_train <- subset(df, select=-c(learning_outcome))[train_index,]
+y_train <- df[train_index, "learning_outcome"]
+x_test <- subset(df, select=-c(learning_outcome))[test_index,]
+y_test <- df[test_index, "learning_outcome"]
+# scale and center training data
+scaling <- scale_numbers(x_train)
+x_train <- scaling$data
+# use training data info to scale and center test data
+x_test <- scale_numbers(x_test, FALSE, scaling$means, scaling$sds)$data
+# model data
+model_lasso <- cv.glmnet(x=as.matrix(x_train), y=y_train)
+# predict
+pred_lasso <- predict(model_lasso, newx=data.matrix(x_test), s="lambda.1se")
+learning_outcome_rmse <- rmse(y_test, pred_lasso)
+
+# plot actual vs predicted
+plot(y_test, pred_lasso, main="Learning Outcome Actual vs Predicted", xlab="Actual", ylab="Predicted")
+abline(c(0,1), col="red")
+
+# plot coefficient impact
+df_coeff <- data.frame(
+  feature = dimnames(coef(model_lasso))[[1]][-1],
+  coef = coef(model_lasso)[-1],
+  row.names = NULL)
+
+ggplot(df_coeff, aes(y=coef, x=feature)) +
+  geom_bar(position="dodge", stat="identity", fill="blue") +
+  theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+The model is not very good at predicting the learning outcome as we can see in the plot Actual vs Predicted.
+
+We get information on which features are important to predict the learning outcome. Being in an high income country has a positive effect while being in a low or lower middle income country has a negative effect. Also the literacy rate has a high impact on the learning outcome. The gdpc and and the amount spent on education has surprysingly no impact but this my be shrunk because of the correlation with the income group.
+The year has almost no inpact which is in accordance that the learning outcome is rather stable over the span of 2000 to 2020.
+
+
+# Model Completion Rate
+
+```{r}
+# select indicator of interest
+x_train <- subset(df, select=-c(completion_rate))[train_index,]
+y_train <- df[train_index, "completion_rate"]
+x_test <- subset(df, select=-c(completion_rate))[test_index,]
+y_test <- df[test_index, "completion_rate"]
+# scale and center training data
+scaling <- scale_numbers(x_train)
+x_train <- scaling$data
+# use training data info to scale and center test data
+x_test <- scale_numbers(x_test, FALSE, scaling$means, scaling$sds)$data
+# model data
+model_lasso <- cv.glmnet(x=as.matrix(x_train), y=y_train)
+# predict
+pred_lasso <- predict(model_lasso, newx=data.matrix(x_test), s="lambda.1se")
+completion_rate_rmse <- rmse(y_test, pred_lasso)
+
+# plot actual vs predicted
+plot(y_test, pred_lasso, main="Completion Rate Actual vs Predicted", xlab="Actual", ylab="Predicted")
+abline(c(0,1), col="red")
+
+# plot coefficient impact
+df_coeff <- data.frame(
+  feature = dimnames(coef(model_lasso))[[1]][-1],
+  coef = coef(model_lasso)[-1],
+  row.names = NULL)
+
+ggplot(df_coeff, aes(y=coef, x=feature)) +
+  geom_bar(position="dodge", stat="identity", fill="blue") +
+  theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+The underlying data seems to have some nonlinear relationshop as we can see from the Actual vs Predicted plot. 
+
+The highest impact for this model has the literacy rate followed by the learning outcome. Here the gdppc seems to play some role in the model while the income group has no impact.
+The impact of the year is probaply caused by the fact that the completion rate rises over the years for all income groups.
+
+# Model Literacy Rate
+
+```{r}
+# select indicator of interest
+x_train <- subset(df, select=-c(literacy_rate))[train_index,]
+y_train <- df[train_index, "literacy_rate"]
+x_test <- subset(df, select=-c(literacy_rate))[test_index,]
+y_test <- df[test_index, "literacy_rate"]
+# scale and center training data
+scaling <- scale_numbers(x_train)
+x_train <- scaling$data
+# use training data info to scale and center test data
+x_test <- scale_numbers(x_test, FALSE, scaling$means, scaling$sds)$data
+# model data
+model_lasso <- cv.glmnet(x=as.matrix(x_train), y=y_train)
+# predict
+pred_lasso <- predict(model_lasso, newx=data.matrix(x_test), s="lambda.1se")
+literacy_rate_rmse <- rmse(y_test, pred_lasso)
+
+# plot actual vs predicted
+plot(y_test, pred_lasso, main="Literacy Rate Actual vs Predicted", xlab="Actual", ylab="Predicted")
+abline(c(0,1), col="red")
+
+# plot coefficient impact
+df_coeff <- data.frame(
+  feature = dimnames(coef(model_lasso))[[1]][-1],
+  coef = coef(model_lasso)[-1],
+  row.names = NULL)
+
+ggplot(df_coeff, aes(y=coef, x=feature)) +
+  geom_bar(position="dodge", stat="identity", fill="blue") +
+  theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+For the literacy rate we see some nonlinear relationship again but the model is the best of the three. 
+
+Here the other two target features leraning outcome and completion rate have a high impact. Also the low income group has a high negative impact while the high income group has none.
+Most features have no impact on the literacy rate. Because the literacy rate rose over the last 20 years we expected some importance of the year. 
+
+# Conclusion
+
+```{r}
+rmse_values <- c(learning_outcome_rmse, completion_rate_rmse, literacy_rate_rmse)
+names(rmse_values) <- c("Learning Outcome", "Completion Rate", "Literacy Rate")
+barplot(
+  rmse_values,
+  col=c("#ff7f0e", "#2ca02c", "#8c564b"),
+  main="RMSE by Model Target Indicator")
+```
+
+The above plot shows that all models do not perform very well. The models for completion rate is on average wrong by 15% for literacy rate 8% and for the learning outcome by 50 points.
+
+Nevertheless, we are able to get some insight into the relationship between the features. Our three selected features are highly correlated which is understandable. Further the gdppc and the amount spent on education do not have very much impact which was a surprise as the dashboard clearly shows a relationship.
+
+
+</div></pre>
